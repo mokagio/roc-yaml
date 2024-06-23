@@ -2,9 +2,11 @@ module [
     YAML,
 ]
 
-YAML : { key : Str }
+YAML := {}
 
-parse : Str -> YAML
+Dummy : { key : Str }
+
+parse : Str -> Dummy
 parse = \_ ->
     { key: "value" }
 
