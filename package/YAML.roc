@@ -1316,75 +1316,85 @@ ObjectState : [
     InvalidObject,
 ]
 
-# Test decode of record with two strings ignoring whitespace
 expect
-    input = Str.toUtf8 " {\n\"FruitCount\"\t:2\n, \"OwnerName\": \"Farmer Joe\" } "
+    input = Str.toUtf8 "FruitCount: 2\nOwnerName: \"Farmer Joe\""
     decoder = utf8With { fieldNameMapping: PascalCase }
     actual = Decode.fromBytesPartial input decoder
     expected = Ok { fruitCount: 2, ownerName: "Farmer Joe" }
 
     actual.result == expected
 
-# Test decode of record with an array of strings and a boolean field
-expect
-    input = Str.toUtf8 "{\"fruit-flavours\": [\"Apples\",\"Bananas\",\"Pears\"], \"is-fresh\": true }"
-    decoder = utf8With { fieldNameMapping: KebabCase }
-    actual = Decode.fromBytesPartial input decoder
-    expected = Ok { fruitFlavours: ["Apples", "Bananas", "Pears"], isFresh: Bool.true }
+# FIXME: Convert these tests
 
-    actual.result == expected
+# # Test decode of record with two strings ignoring whitespace
+# expect
+#     input = Str.toUtf8 " {\n\"FruitCount\"\t:2\n, \"OwnerName\": \"Farmer Joe\" } "
+#     decoder = utf8With { fieldNameMapping: PascalCase }
+#     actual = Decode.fromBytesPartial input decoder
+#     expected = Ok { fruitCount: 2, ownerName: "Farmer Joe" }
 
-# Test decode of record with a string and number field
-expect
-    input = Str.toUtf8 "{\"first_segment\":\"ab\",\"second_segment\":10}"
-    decoder = utf8With { fieldNameMapping: SnakeCase }
-    actual = Decode.fromBytesPartial input decoder
-    expected = Ok { firstSegment: "ab", secondSegment: 10u8 }
+#     actual.result == expected
 
-    actual.result == expected
+# # Test decode of record with an array of strings and a boolean field
+# expect
+#     input = Str.toUtf8 "{\"fruit-flavours\": [\"Apples\",\"Bananas\",\"Pears\"], \"is-fresh\": true }"
+#     decoder = utf8With { fieldNameMapping: KebabCase }
+#     actual = Decode.fromBytesPartial input decoder
+#     expected = Ok { fruitFlavours: ["Apples", "Bananas", "Pears"], isFresh: Bool.true }
 
-# Test decode of record of a record
-expect
-    input = Str.toUtf8 "{\"OUTER\":{\"INNER\":\"a\"},\"OTHER\":{\"ONE\":\"b\",\"TWO\":10}}"
-    decoder = utf8With { fieldNameMapping: Custom fromYellingCase }
-    actual = Decode.fromBytesPartial input decoder
-    expected = Ok { outer: { inner: "a" }, other: { one: "b", two: 10u8 } }
+#     actual.result == expected
 
-    actual.result == expected
+# # Test decode of record with a string and number field
+# expect
+#     input = Str.toUtf8 "{\"first_segment\":\"ab\",\"second_segment\":10}"
+#     decoder = utf8With { fieldNameMapping: SnakeCase }
+#     actual = Decode.fromBytesPartial input decoder
+#     expected = Ok { firstSegment: "ab", secondSegment: 10u8 }
 
-fromYellingCase = \str ->
-    Str.toUtf8 str
-    |> List.map toLowercase
-    |> Str.fromUtf8
-    |> crashOnBadUtf8Error
+#     actual.result == expected
 
-expect fromYellingCase "YELLING" == "yelling"
+# # Test decode of record of a record
+# expect
+#     input = Str.toUtf8 "{\"OUTER\":{\"INNER\":\"a\"},\"OTHER\":{\"ONE\":\"b\",\"TWO\":10}}"
+#     decoder = utf8With { fieldNameMapping: Custom fromYellingCase }
+#     actual = Decode.fromBytesPartial input decoder
+#     expected = Ok { outer: { inner: "a" }, other: { one: "b", two: 10u8 } }
 
-# Complex example from IETF RFC 8259 (2017)
-complexExampleJson = Str.toUtf8 "{\"Image\":{\"Animated\":false,\"Height\":600,\"Ids\":[116,943,234,38793],\"Thumbnail\":{\"Height\":125,\"Url\":\"http:\\/\\/www.example.com\\/image\\/481989943\",\"Width\":100},\"Title\":\"View from 15th Floor\",\"Width\":800}}"
-complexExampleRecord = {
-    image: {
-        width: 800,
-        height: 600,
-        title: "View from 15th Floor",
-        thumbnail: {
-            url: "http://www.example.com/image/481989943",
-            height: 125,
-            width: 100,
-        },
-        animated: Bool.false,
-        ids: [116, 943, 234, 38793],
-    },
-}
+#     actual.result == expected
 
-# Test decode of Complex Example
-expect
-    input = complexExampleJson
-    decoder = utf8With { fieldNameMapping: PascalCase }
-    actual = Decode.fromBytes input decoder
-    expected = Ok complexExampleRecord
+# fromYellingCase = \str ->
+#     Str.toUtf8 str
+#     |> List.map toLowercase
+#     |> Str.fromUtf8
+#     |> crashOnBadUtf8Error
 
-    actual == expected
+# expect fromYellingCase "YELLING" == "yelling"
+
+# # Complex example from IETF RFC 8259 (2017)
+# complexExampleJson = Str.toUtf8 "{\"Image\":{\"Animated\":false,\"Height\":600,\"Ids\":[116,943,234,38793],\"Thumbnail\":{\"Height\":125,\"Url\":\"http:\\/\\/www.example.com\\/image\\/481989943\",\"Width\":100},\"Title\":\"View from 15th Floor\",\"Width\":800}}"
+# complexExampleRecord = {
+#     image: {
+#         width: 800,
+#         height: 600,
+#         title: "View from 15th Floor",
+#         thumbnail: {
+#             url: "http://www.example.com/image/481989943",
+#             height: 125,
+#             width: 100,
+#         },
+#         animated: Bool.false,
+#         ids: [116, 943, 234, 38793],
+#     },
+# }
+
+# # Test decode of Complex Example
+# expect
+#     input = complexExampleJson
+#     decoder = utf8With { fieldNameMapping: PascalCase }
+#     actual = Decode.fromBytes input decoder
+#     expected = Ok complexExampleRecord
+
+#     actual == expected
 
 fromObjectNameUsingMap : Str, FieldNameMapping -> Str
 fromObjectNameUsingMap = \objectName, fieldNameMapping ->
