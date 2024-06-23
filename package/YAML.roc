@@ -7,11 +7,10 @@ YAML := {}
 
 Dummy : { key : Str }
 
-parse : Str -> Dummy
+parse : Str -> Result Dummy [ListWasEmpty] # TODO: Use custom error type(s)
 parse = \input ->
     getValueFromKeyValueLine input
     |> Result.map \value -> { key: value }
-    |> Result.withDefault { key: "error" }
 
 getValueFromKeyValueLine : Str -> Result Str [ListWasEmpty] # TODO: Add different error for line without :
 getValueFromKeyValueLine = \input ->
@@ -22,6 +21,6 @@ getValueFromKeyValueLine = \input ->
     else
         Err ListWasEmpty
 
-expect parse "key: value" == { key: "value" }
-expect parse "key: other value" == { key: "other value" }
-expect parse "not a YAML" == { key: "error" }
+expect parse "key: value" == Ok { key: "value" }
+expect parse "key: other value" == Ok { key: "other value" }
+expect parse "not a YAML" == Err ListWasEmpty
