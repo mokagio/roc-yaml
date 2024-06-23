@@ -21,3 +21,4 @@ getValueFromKeyValueLine = \input ->
 
 
 expect parse "key: value" == { key: "value" }
+expect parse "key: other value" == { key: "other value" }
