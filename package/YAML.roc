@@ -1,10 +1,10 @@
 module [
-    Yaml,
+    YAML,
 ]
 
-Yaml : { key : Str }
+YAML : { key : Str }
 
-parse : Str -> Yaml
+parse : Str -> YAML
 parse = \_ ->
     { key: "value" }
 

@@ -1,2 +1,2 @@
 test:
-	roc test package/Yaml.roc
+	roc test package/YAML.roc
