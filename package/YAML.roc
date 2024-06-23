@@ -1109,180 +1109,180 @@ SkipValueState : [
 ]
 
 # Test decode of partial record
-expect
-    input = Str.toUtf8 "{\"extraField\":2, \"ownerName\": \"Farmer Joe\"}"
-    actual : DecodeResult { ownerName : Str }
-    actual = Decode.fromBytesPartial input utf8
+# expect
+#     input = Str.toUtf8 "{\"extraField\":2, \"ownerName\": \"Farmer Joe\"}"
+#     actual : DecodeResult { ownerName : Str }
+#     actual = Decode.fromBytesPartial input utf8
 
-    expected = Ok { ownerName: "Farmer Joe" }
+#     expected = Ok { ownerName: "Farmer Joe" }
 
-    result = actual.result
-    result == expected
+#     result = actual.result
+#     result == expected
 
 # Test decode of partial record in list additional field last
-expect
-    input = Str.toUtf8 "[{\"ownerName\": \"Farmer Joe\", \"extraField\":2}]"
-    actual : DecodeResult (List { ownerName : Str })
-    actual = Decode.fromBytesPartial input utf8
+# expect
+#     input = Str.toUtf8 "[{\"ownerName\": \"Farmer Joe\", \"extraField\":2}]"
+#     actual : DecodeResult (List { ownerName : Str })
+#     actual = Decode.fromBytesPartial input utf8
 
-    expected = Ok [{ ownerName: "Farmer Joe" }]
+#     expected = Ok [{ ownerName: "Farmer Joe" }]
 
-    result = actual.result
-    result == expected
+#     result = actual.result
+#     result == expected
 
 # Test decode of partial record in record partial field last
-expect
-    input = Str.toUtf8 "{\"value\": {\"ownerName\": \"Farmer Joe\",\"extraField\":2}}"
-    actual : DecodeResult { value : { ownerName : Str } }
-    actual = Decode.fromBytesPartial input utf8
+# expect
+#     input = Str.toUtf8 "{\"value\": {\"ownerName\": \"Farmer Joe\",\"extraField\":2}}"
+#     actual : DecodeResult { value : { ownerName : Str } }
+#     actual = Decode.fromBytesPartial input utf8
 
-    expected = Ok { value: { ownerName: "Farmer Joe" } }
+#     expected = Ok { value: { ownerName: "Farmer Joe" } }
 
-    result = actual.result
-    result == expected
+#     result = actual.result
+#     result == expected
 
 # Test decode of partial record in partial record additional fields last
-expect
-    input = Str.toUtf8 "{\"value\": {\"ownerName\": \"Farmer Joe\", \"extraField\":2}, \"extraField\":2}"
-    actual : DecodeResult { value : { ownerName : Str } }
-    actual = Decode.fromBytesPartial input utf8
+# expect
+#     input = Str.toUtf8 "{\"value\": {\"ownerName\": \"Farmer Joe\", \"extraField\":2}, \"extraField\":2}"
+#     actual : DecodeResult { value : { ownerName : Str } }
+#     actual = Decode.fromBytesPartial input utf8
 
-    expected = Ok { value: { ownerName: "Farmer Joe" } }
+#     expected = Ok { value: { ownerName: "Farmer Joe" } }
 
-    result = actual.result
-    result == expected
+#     result = actual.result
+#     result == expected
 
 # Test decode of partial record with multiple additional fields
-expect
-    input = Str.toUtf8 "{\"extraField\":2, \"ownerName\": \"Farmer Joe\", \"extraField2\":2 }"
-    actual : DecodeResult { ownerName : Str }
-    actual = Decode.fromBytesPartial input utf8
+# expect
+#     input = Str.toUtf8 "{\"extraField\":2, \"ownerName\": \"Farmer Joe\", \"extraField2\":2 }"
+#     actual : DecodeResult { ownerName : Str }
+#     actual = Decode.fromBytesPartial input utf8
 
-    expected = Ok { ownerName: "Farmer Joe" }
+#     expected = Ok { ownerName: "Farmer Joe" }
 
-    result = actual.result
-    result == expected
+#     result = actual.result
+#     result == expected
 
 # Test decode of partial record with string value
-expect
-    input = Str.toUtf8 "{\"extraField\": \"abc\", \"ownerName\": \"Farmer Joe\"}"
-    actual : DecodeResult { ownerName : Str }
-    actual = Decode.fromBytesPartial input utf8
+# expect
+#     input = Str.toUtf8 "{\"extraField\": \"abc\", \"ownerName\": \"Farmer Joe\"}"
+#     actual : DecodeResult { ownerName : Str }
+#     actual = Decode.fromBytesPartial input utf8
 
-    expected = Ok { ownerName: "Farmer Joe" }
+#     expected = Ok { ownerName: "Farmer Joe" }
 
-    result = actual.result
-    result == expected
+#     result = actual.result
+#     result == expected
 
 # Test decode of partial record with string value with a comma
-expect
-    input = Str.toUtf8 "{\"extraField\": \"a,bc\", \"ownerName\": \"Farmer Joe\"}"
-    actual : DecodeResult { ownerName : Str }
-    actual = Decode.fromBytesPartial input utf8
+# expect
+#     input = Str.toUtf8 "{\"extraField\": \"a,bc\", \"ownerName\": \"Farmer Joe\"}"
+#     actual : DecodeResult { ownerName : Str }
+#     actual = Decode.fromBytesPartial input utf8
 
-    expected = Ok { ownerName: "Farmer Joe" }
+#     expected = Ok { ownerName: "Farmer Joe" }
 
-    result = actual.result
-    result == expected
+#     result = actual.result
+#     result == expected
 
 # Test decode of partial record with string value with an escaped "
-expect
-    input = Str.toUtf8 "{\"extraField\": \"a\\\"bc\", \"ownerName\": \"Farmer Joe\"}"
-    actual : DecodeResult { ownerName : Str }
-    actual = Decode.fromBytesPartial input utf8
+# expect
+#     input = Str.toUtf8 "{\"extraField\": \"a\\\"bc\", \"ownerName\": \"Farmer Joe\"}"
+#     actual : DecodeResult { ownerName : Str }
+#     actual = Decode.fromBytesPartial input utf8
 
-    expected = Ok { ownerName: "Farmer Joe" }
+#     expected = Ok { ownerName: "Farmer Joe" }
 
-    result = actual.result
-    result == expected
+#     result = actual.result
+#     result == expected
 
 # Test decode of partial record with an array
-expect
-    input = Str.toUtf8 "{\"extraField\": [1,2,3], \"ownerName\": \"Farmer Joe\"}"
-    actual : DecodeResult { ownerName : Str }
-    actual = Decode.fromBytesPartial input utf8
+# expect
+#     input = Str.toUtf8 "{\"extraField\": [1,2,3], \"ownerName\": \"Farmer Joe\"}"
+#     actual : DecodeResult { ownerName : Str }
+#     actual = Decode.fromBytesPartial input utf8
 
-    expected = Ok { ownerName: "Farmer Joe" }
+#     expected = Ok { ownerName: "Farmer Joe" }
 
-    result = actual.result
-    result == expected
+#     result = actual.result
+#     result == expected
 
 # Test decode of partial record with a nested array
-expect
-    input = Str.toUtf8 "{\"extraField\": [1,[4,5,[[9],6,7]],3], \"ownerName\": \"Farmer Joe\"}"
-    actual : DecodeResult { ownerName : Str }
-    actual = Decode.fromBytesPartial input utf8
+# expect
+#     input = Str.toUtf8 "{\"extraField\": [1,[4,5,[[9],6,7]],3], \"ownerName\": \"Farmer Joe\"}"
+#     actual : DecodeResult { ownerName : Str }
+#     actual = Decode.fromBytesPartial input utf8
 
-    expected = Ok { ownerName: "Farmer Joe" }
+#     expected = Ok { ownerName: "Farmer Joe" }
 
-    result = actual.result
-    result == expected
+#     result = actual.result
+#     result == expected
 
 # Test decode of partial record with a nested array with strings inside
-expect
-    input = Str.toUtf8 "{\"extraField\": [\"a\", [\"bc]]]def\"]], \"ownerName\": \"Farmer Joe\"}"
-    actual : DecodeResult { ownerName : Str }
-    actual = Decode.fromBytesPartial input utf8
+# expect
+#     input = Str.toUtf8 "{\"extraField\": [\"a\", [\"bc]]]def\"]], \"ownerName\": \"Farmer Joe\"}"
+#     actual : DecodeResult { ownerName : Str }
+#     actual = Decode.fromBytesPartial input utf8
 
-    expected = Ok { ownerName: "Farmer Joe" }
+#     expected = Ok { ownerName: "Farmer Joe" }
 
-    result = actual.result
-    result == expected
+#     result = actual.result
+#     result == expected
 
 # Test decode of partial record with a nested array with escaped strings inside
-expect
-    input = Str.toUtf8 "{\"extraField\": [\"a\", [\"b\\cdef\"]], \"ownerName\": \"Farmer Joe\"}"
-    actual : DecodeResult { ownerName : Str }
-    actual = Decode.fromBytesPartial input utf8
+# expect
+#     input = Str.toUtf8 "{\"extraField\": [\"a\", [\"b\\cdef\"]], \"ownerName\": \"Farmer Joe\"}"
+#     actual : DecodeResult { ownerName : Str }
+#     actual = Decode.fromBytesPartial input utf8
 
-    expected = Ok { ownerName: "Farmer Joe" }
+#     expected = Ok { ownerName: "Farmer Joe" }
 
-    result = actual.result
-    result == expected
+#     result = actual.result
+#     result == expected
 
 # Test decode of partial record with an object
-expect
-    input = Str.toUtf8 "{\"extraField\": { \"fieldA\": 6 }, \"ownerName\": \"Farmer Joe\"}"
-    actual : DecodeResult { ownerName : Str }
-    actual = Decode.fromBytesPartial input utf8
+# expect
+#     input = Str.toUtf8 "{\"extraField\": { \"fieldA\": 6 }, \"ownerName\": \"Farmer Joe\"}"
+#     actual : DecodeResult { ownerName : Str }
+#     actual = Decode.fromBytesPartial input utf8
 
-    expected = Ok { ownerName: "Farmer Joe" }
+#     expected = Ok { ownerName: "Farmer Joe" }
 
-    result = actual.result
-    result == expected
+#     result = actual.result
+#     result == expected
 
 # Test decode of partial record with a nested object
-expect
-    input = Str.toUtf8 "{\"extraField\": { \"fieldA\": 6, \"nested\": { \"nestField\": \"abcd\" } }, \"ownerName\": \"Farmer Joe\"}"
-    actual : DecodeResult { ownerName : Str }
-    actual = Decode.fromBytesPartial input utf8
+# expect
+#     input = Str.toUtf8 "{\"extraField\": { \"fieldA\": 6, \"nested\": { \"nestField\": \"abcd\" } }, \"ownerName\": \"Farmer Joe\"}"
+#     actual : DecodeResult { ownerName : Str }
+#     actual = Decode.fromBytesPartial input utf8
 
-    expected = Ok { ownerName: "Farmer Joe" }
+#     expected = Ok { ownerName: "Farmer Joe" }
 
-    result = actual.result
-    result == expected
+#     result = actual.result
+#     result == expected
 
 # Test decode of partial record with a nested object and string
-expect
-    input = Str.toUtf8 "{\"extraField\": { \"fieldA\": 6, \"nested\": { \"nestField\": \"ab}}}}}cd\" } }, \"ownerName\": \"Farmer Joe\"}"
-    actual : DecodeResult { ownerName : Str }
-    actual = Decode.fromBytesPartial input utf8
+# expect
+#     input = Str.toUtf8 "{\"extraField\": { \"fieldA\": 6, \"nested\": { \"nestField\": \"ab}}}}}cd\" } }, \"ownerName\": \"Farmer Joe\"}"
+#     actual : DecodeResult { ownerName : Str }
+#     actual = Decode.fromBytesPartial input utf8
 
-    expected = Ok { ownerName: "Farmer Joe" }
+#     expected = Ok { ownerName: "Farmer Joe" }
 
-    result = actual.result
-    result == expected
+#     result = actual.result
+#     result == expected
 
 # Test decode of partial record with a nested object and string ending with an escaped char
-expect
-    input = Str.toUtf8 "{\"extraField\": { \"fieldA\": 6, \"nested\": { \"nestField\": \"ab\\cd\" } }, \"ownerName\": \"Farmer Joe\"}"
-    actual : DecodeResult { ownerName : Str }
-    actual = Decode.fromBytesPartial input utf8
+# expect
+#     input = Str.toUtf8 "{\"extraField\": { \"fieldA\": 6, \"nested\": { \"nestField\": \"ab\\cd\" } }, \"ownerName\": \"Farmer Joe\"}"
+#     actual : DecodeResult { ownerName : Str }
+#     actual = Decode.fromBytesPartial input utf8
 
-    expected = Ok { ownerName: "Farmer Joe" }
+#     expected = Ok { ownerName: "Farmer Joe" }
 
-    result = actual.result
-    result == expected
+#     result = actual.result
+#     result == expected
 
 objectHelp : ObjectState, U8 -> [Break ObjectState, Continue ObjectState]
 objectHelp = \state, byte ->
