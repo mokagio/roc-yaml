@@ -76,12 +76,6 @@ colon = ":"
 doubleQuote = "\""
 singleQuote = "'"
 
-isWrappedInDoubleQuotes : Str -> Bool
-isWrappedInDoubleQuotes = \str ->
-    trimmed = Str.trim str
-
-    Str.startsWith trimmed doubleQuote && Str.endsWith trimmed doubleQuote
-
 isWrappedInSingleQuotes : Str -> Bool
 isWrappedInSingleQuotes = \str ->
     trimmed = Str.trim str
@@ -94,11 +88,42 @@ expect isWrappedInSingleQuotes "'abc\"" == Bool.false
 expect isWrappedInSingleQuotes "'abc'" == Bool.true
 expect isWrappedInSingleQuotes "abc" == Bool.false
 
+isWrappedInDoubleQuotes : Str -> Bool
+isWrappedInDoubleQuotes = \str ->
+    trimmed = Str.trim str
+
+    Str.startsWith trimmed doubleQuote && Str.endsWith trimmed doubleQuote
+
 expect isWrappedInDoubleQuotes "\"abc\"" == Bool.true
 expect isWrappedInDoubleQuotes "\"abc'" == Bool.false
 expect isWrappedInDoubleQuotes "'abc\"" == Bool.false
 expect isWrappedInDoubleQuotes "'abc'" == Bool.false
 expect isWrappedInDoubleQuotes "abc" == Bool.false
+
+stripDoubleQuotes : Str -> Str
+stripDoubleQuotes = \str ->
+    Str.replaceFirst str doubleQuote ""
+    |> Str.replaceLast doubleQuote ""
+
+expect stripDoubleQuotes "\"abc\"" == "abc"
+expect stripDoubleQuotes "abc" == "abc"
+expect stripSingleQuotes "abc" == "abc"
+# FIXME: Decide whether this is the desired behavior? It will do for now while the behavior is unrefined
+expect stripDoubleQuotes "abc\"" == "abc"
+expect stripDoubleQuotes "abc\"\"" == "abc"
+expect stripDoubleQuotes "\"\"abc\"" == "\"abc"
+
+stripSingleQuotes : Str -> Str
+stripSingleQuotes = \str ->
+    Str.replaceFirst str singleQuote ""
+    |> Str.replaceLast singleQuote ""
+
+expect stripSingleQuotes "'abc'" == "abc"
+expect stripSingleQuotes "abc" == "abc"
+# FIXME: Decide whether this is the desired behavior? It will do for now while the behavior is unrefined
+expect stripSingleQuotes "abc'" == "abc"
+expect stripSingleQuotes "abc''" == "abc"
+expect stripSingleQuotes "''abc'" == "'abc"
 
 expect parse "key: value" == Ok { key: "key", value: [String "value"] }
 expect parse "key: other value" == Ok { key: "key", value: [String "other value"] }
