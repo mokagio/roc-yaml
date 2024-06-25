@@ -45,7 +45,12 @@ processRawStrIntoValue : Str -> Value
 processRawStrIntoValue = \rawStr ->
     trimmed = Str.trim rawStr # FIXME: Indentation matters in YAML
 
-    if isInteger trimmed then
+    # If the string is wrapped in quotes, then it can't be a number or boolean
+    if isWrappedInDoubleQuotes trimmed then
+        String (stripDoubleQuotes trimmed)
+    else if isWrappedInSingleQuotes trimmed then
+        String (stripSingleQuotes trimmed)
+    else if isInteger trimmed then
         when Str.toDec trimmed is
             Ok value -> Decimal value
             Err _ -> String "failed to decode number"
@@ -129,4 +134,6 @@ expect parse "key: value" == Ok { key: "key", value: [String "value"] }
 expect parse "key: other value" == Ok { key: "key", value: [String "other value"] }
 expect parse "other_key: yet other value" == Ok { key: "other_key", value: [String "yet other value"] }
 expect parse "key: 1" == Ok { key: "key", value: [Decimal 1] }
+expect parse "key: \"true\"" == Ok { key: "key", value: [String "true"] }
+expect parse "key: 'true'" == Ok { key: "key", value: [String "true"] }
 expect parse "not a YAML" == Err ListWasEmpty
