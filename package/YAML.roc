@@ -10,6 +10,7 @@ KeyValue : { key : Str, value : List Value }
 Value : [
     String Str,
     Decimal Dec,
+    Boolean Bool,
 ]
 
 parse : Str -> Result KeyValue [ListWasEmpty] # TODO: Use custom error type(s)
@@ -55,7 +56,9 @@ processRawStrIntoValue = \rawStr ->
             Ok value -> Decimal value
             Err _ -> String "failed to decode number"
     else
-        String trimmed
+        when toBool trimmed is
+            Ok value -> Boolean value
+            Err _ -> String trimmed
 
 isDigit : U8 -> Bool
 isDigit = \b -> b >= '0' && b <= '9'
@@ -75,6 +78,23 @@ isInteger = \str ->
 
 expect isInteger "123" == Bool.true
 expect isInteger "abc" == Bool.false
+
+toBool : Str -> Result Bool [NotABoolean]
+toBool = \str ->
+    if str == "true" then
+        Ok Bool.true
+    else if str == "false" then
+        Ok Bool.false
+    else
+        Err NotABoolean
+
+expect toBool "true" == Ok Bool.true
+expect toBool "false" == Ok Bool.false
+expect toBool "abc" == Err NotABoolean
+expect toBool "tru" == Err NotABoolean
+expect toBool "rue" == Err NotABoolean
+expect toBool " true" == Err NotABoolean
+expect toBool "false " == Err NotABoolean
 
 colon = ":"
 
@@ -134,6 +154,11 @@ expect parse "key: value" == Ok { key: "key", value: [String "value"] }
 expect parse "key: other value" == Ok { key: "key", value: [String "other value"] }
 expect parse "other_key: yet other value" == Ok { key: "other_key", value: [String "yet other value"] }
 expect parse "key: 1" == Ok { key: "key", value: [Decimal 1] }
+expect parse "key: true" == Ok { key: "key", value: [Boolean Bool.true] }
+expect parse "k: false" == Ok { key: "k", value: [Boolean Bool.false] }
+expect parse "k:    false" == Ok { key: "k", value: [Boolean Bool.false] }
+expect parse "k: false " == Ok { key: "k", value: [Boolean Bool.false] }
+expect parse "k: fa lse " == Ok { key: "k", value: [String "fa lse"] }
 expect parse "key: \"true\"" == Ok { key: "key", value: [String "true"] }
 expect parse "key: 'true'" == Ok { key: "key", value: [String "true"] }
 expect parse "not a YAML" == Err ListWasEmpty
