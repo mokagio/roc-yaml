@@ -5,7 +5,7 @@ module [
 
 YAML := {}
 
-KeyValue : { key : Str, value : Value }
+KeyValue : { key : Str, value : List Value }
 
 Value : [
     String Str,
@@ -17,7 +17,7 @@ parse = \input ->
     when getKeyFromKeyValueLine input is
         Ok key ->
             when getValueFromKeyValueLine input is
-                Ok value -> Ok { key, value }
+                Ok value -> Ok { key, value: [value] }
                 _ -> Err ListWasEmpty
 
         _ -> Err ListWasEmpty
@@ -67,8 +67,8 @@ expect isDigit '-' == Bool.false
 
 colon = ":"
 
-expect parse "key: value" == Ok { key: "key", value: String "value" }
-expect parse "key: other value" == Ok { key: "key", value: String "other value" }
-expect parse "other_key: yet other value" == Ok { key: "other_key", value: String "yet other value" }
-expect parse "key: 1" == Ok { key: "key", value: Decimal 1 }
+expect parse "key: value" == Ok { key: "key", value: [String "value"] }
+expect parse "key: other value" == Ok { key: "key", value: [String "other value"] }
+expect parse "other_key: yet other value" == Ok { key: "other_key", value: [String "yet other value"] }
+expect parse "key: 1" == Ok { key: "key", value: [Decimal 1] }
 expect parse "not a YAML" == Err ListWasEmpty
