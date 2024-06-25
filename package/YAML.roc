@@ -28,18 +28,29 @@ getKeyFromKeyValueLine = \input ->
     if Str.contains input colon then
         Str.split input colon
         |> List.first
-        |> Result.map Str.trim # TODO indentaion matters in YAML
+        |> Result.map Str.trim # FIXME: Indentation matters in YAML
+    else
+        Err ListWasEmpty
+
+getValueFromKeyValueLine : Str -> Result Value [ListWasEmpty] # TODO: Add different error for line without :
+getValueFromKeyValueLine = \input ->
+    if Str.contains input colon then
+        Str.split input colon
+        |> List.last
+        |> Result.map processRawStrIntoValue
     else
         Err ListWasEmpty
 
 processRawStrIntoValue : Str -> Value
 processRawStrIntoValue = \rawStr ->
-    if Str.walkUtf8 (Str.trim rawStr) Bool.true \answer, byte -> answer && isDigit byte == Bool.true then
-        when Str.toDec rawStr is
+    trimmed = Str.trim rawStr # FIXME: Indentation matters in YAML
+
+    if Str.walkUtf8 trimmed Bool.true \answer, byte -> answer && isDigit byte == Bool.true then
+        when Str.toDec trimmed is
             Ok value -> Decimal value
             Err _ -> String "failed to decode number"
     else
-        String rawStr
+        String trimmed
 
 isDigit : U8 -> Bool
 isDigit = \b -> b >= '0' && b <= '9'
@@ -53,15 +64,6 @@ expect isDigit '8' == Bool.true
 expect isDigit '9' == Bool.true
 expect isDigit 'a' == Bool.false
 expect isDigit '-' == Bool.false
-
-getValueFromKeyValueLine : Str -> Result Value [ListWasEmpty] # TODO: Add different error for line without :
-getValueFromKeyValueLine = \input ->
-    if Str.contains input colon then
-        Str.split input colon
-        |> List.last
-        |> Result.map processRawStrIntoValue
-    else
-        Err ListWasEmpty
 
 colon = ":"
 
