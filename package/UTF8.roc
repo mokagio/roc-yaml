@@ -1,10 +1,15 @@
 module [
     UTF8,
+    singleQuote,
+    doubleQuote,
     isDigit,
 ]
 
 ## Opaque type for UTF-8 utils
 UTF8 := {}
+
+singleQuote = '\''
+doubleQuote = '"'
 
 # Originally based on https://github.com/lukewilliamboswell/roc-json/blob/9dd2190872de23cb2d71583bd2a8e65dd4eef46a/package/Json.roc
 

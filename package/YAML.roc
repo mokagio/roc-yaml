@@ -90,11 +90,8 @@ expect toBool "false " == Err NotABoolean
 
 colon = ":"
 
-doubleQuote = "\""
-singleQuote = "'"
-
 isWrappedInSingleQuotes : Str -> Bool
-isWrappedInSingleQuotes = \str -> isWrappedIn singleQuote str
+isWrappedInSingleQuotes = \str -> isWrappedIn str UTF8.singleQuote UTF8.singleQuote
 
 expect isWrappedInSingleQuotes "\"abc\"" == Bool.false
 expect isWrappedInSingleQuotes "\"abc'" == Bool.false
@@ -103,7 +100,7 @@ expect isWrappedInSingleQuotes "'abc'" == Bool.true
 expect isWrappedInSingleQuotes "abc" == Bool.false
 
 isWrappedInDoubleQuotes : Str -> Bool
-isWrappedInDoubleQuotes = \str -> isWrappedIn doubleQuote str
+isWrappedInDoubleQuotes = \str -> isWrappedIn str UTF8.doubleQuote UTF8.doubleQuote
 
 expect isWrappedInDoubleQuotes "\"abc\"" == Bool.true
 expect isWrappedInDoubleQuotes "\"abc'" == Bool.false
@@ -111,28 +108,34 @@ expect isWrappedInDoubleQuotes "'abc\"" == Bool.false
 expect isWrappedInDoubleQuotes "'abc'" == Bool.false
 expect isWrappedInDoubleQuotes "abc" == Bool.false
 
-isWrappedIn : Str, Str -> Bool
-isWrappedIn = \wrapper, str ->
-    trimmed = Str.trim str
-
-    Str.startsWith trimmed wrapper && Str.endsWith trimmed wrapper
-
-isWrappedIn2 : Str, U8, U8 -> Bool
-isWrappedIn2 = \str, startWrapper, endWrapper ->
-    when List.walkUntil (Str.toUtf8 str) Start helper is
+isWrappedIn : Str, U8, U8 -> Bool
+isWrappedIn = \str, startWrapper, endWrapper ->
+    when List.walkUntil (Str.toUtf8 str) Start (isWrappedInHelper startWrapper endWrapper) is
         FoundBothWrappers _ -> Bool.true
         _ -> Bool.false
 
-helper : WrappedSearchState, U8, U8, U8 -> [Continue WrappedSearchState, Break WrappedSearchState]
-helper = \state, byte, startWrapper, endWrapper ->
-    when (state, byte) is
-        (Start, b) if b != startWrapper -> Continue (LookingForStartWrapper (b + 1))
-        (Start, b) if b == startWrapper -> Continue (LookingForEndWrapper (b + 1))
-        (LookingForStartWrapper n, b) if b != startWrapper -> Continue (LookingForStartWrapper (n + 1))
-        (LookingForStartWrapper n, b) if b == startWrapper -> Continue (LookingForEndWrapper (n + 1))
-        (LookingForEndWrapper n, b) if b != endWrapper -> Continue (LookingForEndWrapper (n + 1))
-        (LookingForEndWrapper n, b) if b == endWrapper -> Break (FoundBothWrappers n)
-        _ -> Break Invalid
+expect isWrappedIn "\"abc\"" '"' '"' == Bool.true
+expect isWrappedIn "'abc'" '"' '"' == Bool.false
+expect isWrappedIn "'abc'" '\'' '\'' == Bool.true
+expect isWrappedIn "[abc'" '\'' '\'' == Bool.false
+expect isWrappedIn "[abc'" '[' '\'' == Bool.true
+expect isWrappedIn " 'abc'" '\'' '\'' == Bool.true
+expect isWrappedIn "'abc' " '\'' '\'' == Bool.true
+expect isWrappedIn "'abc'   " '\'' '\'' == Bool.true
+expect isWrappedIn "   'abc'" '\'' '\'' == Bool.true
+expect isWrappedIn "  'abc'   " '\'' '\'' == Bool.true
+
+isWrappedInHelper : U8, U8 -> (WrappedSearchState, U8 -> [Continue WrappedSearchState, Break WrappedSearchState])
+isWrappedInHelper = \startWrapper, endWrapper ->
+    \state, byte ->
+        when (state, byte) is
+            (Start, b) if b != startWrapper -> Continue (LookingForStartWrapper (b + 1))
+            (Start, b) if b == startWrapper -> Continue (LookingForEndWrapper (b + 1))
+            (LookingForStartWrapper n, b) if b != startWrapper -> Continue (LookingForStartWrapper (n + 1))
+            (LookingForStartWrapper n, b) if b == startWrapper -> Continue (LookingForEndWrapper (n + 1))
+            (LookingForEndWrapper n, b) if b != endWrapper -> Continue (LookingForEndWrapper (n + 1))
+            (LookingForEndWrapper n, b) if b == endWrapper -> Break (FoundBothWrappers n)
+            _ -> Break Invalid
 
 WrappedSearchState : [
     Start,
@@ -179,3 +182,6 @@ expect parse "k: fa lse " == Ok { key: "k", value: [String "fa lse"] }
 expect parse "key: \"true\"" == Ok { key: "key", value: [String "true"] }
 expect parse "key: 'true'" == Ok { key: "key", value: [String "true"] }
 expect parse "not a YAML" == Err ListWasEmpty
+
+singleQuote = "'"
+doubleQuote = "\""
