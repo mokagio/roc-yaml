@@ -20,7 +20,7 @@ parse = \input ->
     when getKeyFromKeyValueLine input is
         Ok key ->
             when getValueFromKeyValueLine input is
-                Ok value -> Ok { key, value: [value] }
+                Ok value -> Ok { key, value: value }
                 _ -> Err ListWasEmpty
 
         _ -> Err ListWasEmpty
@@ -35,7 +35,7 @@ getKeyFromKeyValueLine = \input ->
     else
         Err ListWasEmpty
 
-getValueFromKeyValueLine : Str -> Result Value [ListWasEmpty] # TODO: Add different error for line without :
+getValueFromKeyValueLine : Str -> Result (List Value) [ListWasEmpty] # TODO: Add different error for line without :
 getValueFromKeyValueLine = \input ->
     if Str.contains input colon then
         Str.split input colon
@@ -44,23 +44,27 @@ getValueFromKeyValueLine = \input ->
     else
         Err ListWasEmpty
 
-processRawStrIntoValue : Str -> Value
+processRawStrIntoValue : Str -> List Value
 processRawStrIntoValue = \rawStr ->
     trimmed = Str.trim rawStr # FIXME: Indentation matters in YAML
 
-    # If the string is wrapped in quotes, then it can't be a number or boolean
+    # If the string is wrapped in quotes, then it can't be anything other than a string
     if isWrappedInDoubleQuotes trimmed then
-        String (stripDoubleQuotes trimmed)
+        [String (stripDoubleQuotes trimmed)]
     else if isWrappedInSingleQuotes trimmed then
-        String (stripSingleQuotes trimmed)
+        [String (stripSingleQuotes trimmed)]
+    else if isWrappedIn trimmed '[' ']' then
+        Str.split (Str.replaceEach (Str.replaceEach trimmed "]" "") "[" "") ","
+        |> List.map processRawStrIntoValue
+        |> List.walk [] \acc, values -> List.concat acc values
     else if isInteger trimmed then
         when Str.toDec trimmed is
-            Ok value -> Decimal value
-            Err _ -> String "failed to decode number"
+            Ok value -> [Decimal value]
+            Err _ -> [String "failed to decode number"]
     else
         when toBool trimmed is
-            Ok value -> Boolean value
-            Err _ -> String trimmed
+            Ok value -> [Boolean value]
+            Err _ -> [String trimmed]
 
 isInteger : Str -> Bool
 isInteger = \str ->
@@ -181,6 +185,12 @@ expect parse "k: false " == Ok { key: "k", value: [Boolean Bool.false] }
 expect parse "k: fa lse " == Ok { key: "k", value: [String "fa lse"] }
 expect parse "key: \"true\"" == Ok { key: "key", value: [String "true"] }
 expect parse "key: 'true'" == Ok { key: "key", value: [String "true"] }
+expect parse "key: [1,2]" == Ok { key: "key", value: [Decimal 1, Decimal 2] }
+expect parse "key: [1]" == Ok { key: "key", value: [Decimal 1] }
+expect parse "key: [a, b]" == Ok { key: "key", value: [String "a", String "b"] }
+expect parse "key: [b, 1]" == Ok { key: "key", value: [String "b", Decimal 1] }
+# TODO: Nested lists
+# expect parse "key: [c, [1,2]]" == Ok { key: "key", value: [String "c", [Decimal 1, Decimal 2]] }
 expect parse "not a YAML" == Err ListWasEmpty
 
 singleQuote = "'"
