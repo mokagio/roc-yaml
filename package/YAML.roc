@@ -38,6 +38,19 @@ processRawStrIntoValue = \rawStr ->
     # TODO: Value is currently [Str] only
     Str.trim rawStr
 
+isDigit : U8 -> Bool
+isDigit = \b -> b >= '0' && b <= '9'
+
+expect Str.walkUtf8 "123" Bool.true \answer, byte -> answer && isDigit byte == Bool.true
+expect Str.walkUtf8 "abc" Bool.true \answer, byte -> answer && isDigit byte == Bool.false
+
+expect isDigit '0' == Bool.true
+expect isDigit '1' == Bool.true
+expect isDigit '8' == Bool.true
+expect isDigit '9' == Bool.true
+expect isDigit 'a' == Bool.false
+expect isDigit '-' == Bool.false
+
 getValueFromKeyValueLine : Str -> Result Str [ListWasEmpty] # TODO: Add different error for line without :
 getValueFromKeyValueLine = \input ->
     if Str.contains input colon then
