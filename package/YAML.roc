@@ -7,11 +7,10 @@ YAML := {}
 
 KeyValue : { key : Str, value : Value }
 
-# Value : [
-#     Str,
-#     Num, # FIXME Possibly not the right type here. Might need more refined Int, Float, etc.
-# ]
-Value : Str
+Value : [
+    String Str,
+    Decimal Dec,
+]
 
 parse : Str -> Result KeyValue [ListWasEmpty] # TODO: Use custom error type(s)
 parse = \input ->
@@ -24,19 +23,23 @@ parse = \input ->
         _ -> Err ListWasEmpty
 
 # get key from value from line with key: value
-getKeyFromKeyValueLine : Str -> Result Value [ListWasEmpty] # TODO: Add different error for line without :
+getKeyFromKeyValueLine : Str -> Result Str [ListWasEmpty] # TODO: Add different error for line without :
 getKeyFromKeyValueLine = \input ->
     if Str.contains input colon then
         Str.split input colon
         |> List.first
-        |> Result.map processRawStrIntoValue # TODO indentaion matters in YAML
+        |> Result.map Str.trim # TODO indentaion matters in YAML
     else
         Err ListWasEmpty
 
 processRawStrIntoValue : Str -> Value
 processRawStrIntoValue = \rawStr ->
-    # TODO: Value is currently [Str] only
-    Str.trim rawStr
+    if Str.walkUtf8 (Str.trim rawStr) Bool.true \answer, byte -> answer && isDigit byte == Bool.true then
+        when Str.toDec rawStr is
+            Ok value -> Decimal value
+            Err _ -> String "failed to decode number"
+    else
+        String rawStr
 
 isDigit : U8 -> Bool
 isDigit = \b -> b >= '0' && b <= '9'
@@ -51,19 +54,19 @@ expect isDigit '9' == Bool.true
 expect isDigit 'a' == Bool.false
 expect isDigit '-' == Bool.false
 
-getValueFromKeyValueLine : Str -> Result Str [ListWasEmpty] # TODO: Add different error for line without :
+getValueFromKeyValueLine : Str -> Result Value [ListWasEmpty] # TODO: Add different error for line without :
 getValueFromKeyValueLine = \input ->
     if Str.contains input colon then
         Str.split input colon
         |> List.last
-        |> Result.map Str.trim
+        |> Result.map processRawStrIntoValue
     else
         Err ListWasEmpty
 
 colon = ":"
 
-expect parse "key: value" == Ok { key: "key", value: "value" }
-expect parse "key: other value" == Ok { key: "key", value: "other value" }
-expect parse "other_key: yet other value" == Ok { key: "other_key", value: "yet other value" }
-# expect parse "key: 1" == Ok { key: "key", value: 1 }
+expect parse "key: value" == Ok { key: "key", value: String "value" }
+expect parse "key: other value" == Ok { key: "key", value: String "other value" }
+expect parse "other_key: yet other value" == Ok { key: "other_key", value: String "yet other value" }
+expect parse "key: 1" == Ok { key: "key", value: Decimal 1 }
 expect parse "not a YAML" == Err ListWasEmpty
