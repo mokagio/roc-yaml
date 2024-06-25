@@ -117,6 +117,31 @@ isWrappedIn = \wrapper, str ->
 
     Str.startsWith trimmed wrapper && Str.endsWith trimmed wrapper
 
+isWrappedIn2 : Str, U8, U8 -> Bool
+isWrappedIn2 = \str, startWrapper, endWrapper ->
+    when List.walkUntil (Str.toUtf8 str) Start helper is
+        FoundBothWrappers _ -> Bool.true
+        _ -> Bool.false
+
+helper : WrappedSearchState, U8, U8, U8 -> [Continue WrappedSearchState, Break WrappedSearchState]
+helper = \state, byte, startWrapper, endWrapper ->
+    when (state, byte) is
+        (Start, b) if b != startWrapper -> Continue (LookingForStartWrapper (b + 1))
+        (Start, b) if b == startWrapper -> Continue (LookingForEndWrapper (b + 1))
+        (LookingForStartWrapper n, b) if b != startWrapper -> Continue (LookingForStartWrapper (n + 1))
+        (LookingForStartWrapper n, b) if b == startWrapper -> Continue (LookingForEndWrapper (n + 1))
+        (LookingForEndWrapper n, b) if b != endWrapper -> Continue (LookingForEndWrapper (n + 1))
+        (LookingForEndWrapper n, b) if b == endWrapper -> Break (FoundBothWrappers n)
+        _ -> Break Invalid
+
+WrappedSearchState : [
+    Start,
+    LookingForStartWrapper U8,
+    LookingForEndWrapper U8,
+    FoundBothWrappers U8,
+    Invalid,
+]
+
 stripDoubleQuotes : Str -> Str
 stripDoubleQuotes = \str ->
     Str.replaceFirst str doubleQuote ""
