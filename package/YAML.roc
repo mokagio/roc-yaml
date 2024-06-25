@@ -45,7 +45,7 @@ processRawStrIntoValue : Str -> Value
 processRawStrIntoValue = \rawStr ->
     trimmed = Str.trim rawStr # FIXME: Indentation matters in YAML
 
-    if Str.walkUtf8 trimmed Bool.true \answer, byte -> answer && isDigit byte == Bool.true then
+    if isInteger trimmed then
         when Str.toDec trimmed is
             Ok value -> Decimal value
             Err _ -> String "failed to decode number"
@@ -55,15 +55,21 @@ processRawStrIntoValue = \rawStr ->
 isDigit : U8 -> Bool
 isDigit = \b -> b >= '0' && b <= '9'
 
-expect Str.walkUtf8 "123" Bool.true \answer, byte -> answer && isDigit byte == Bool.true
-expect Str.walkUtf8 "abc" Bool.true \answer, byte -> answer && isDigit byte == Bool.false
-
 expect isDigit '0' == Bool.true
 expect isDigit '1' == Bool.true
 expect isDigit '8' == Bool.true
 expect isDigit '9' == Bool.true
 expect isDigit 'a' == Bool.false
 expect isDigit '-' == Bool.false
+
+isInteger : Str -> Bool
+isInteger = \str ->
+    trimmed = Str.trim str
+
+    Str.walkUtf8 trimmed Bool.true \answer, byte -> answer && isDigit byte == Bool.true
+
+expect isInteger "123" == Bool.true
+expect isInteger "abc" == Bool.false
 
 colon = ":"
 
