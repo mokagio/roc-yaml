@@ -77,10 +77,7 @@ doubleQuote = "\""
 singleQuote = "'"
 
 isWrappedInSingleQuotes : Str -> Bool
-isWrappedInSingleQuotes = \str ->
-    trimmed = Str.trim str
-
-    Str.startsWith trimmed singleQuote && Str.endsWith trimmed singleQuote
+isWrappedInSingleQuotes = \str -> isWrappedIn singleQuote str
 
 expect isWrappedInSingleQuotes "\"abc\"" == Bool.false
 expect isWrappedInSingleQuotes "\"abc'" == Bool.false
@@ -89,16 +86,19 @@ expect isWrappedInSingleQuotes "'abc'" == Bool.true
 expect isWrappedInSingleQuotes "abc" == Bool.false
 
 isWrappedInDoubleQuotes : Str -> Bool
-isWrappedInDoubleQuotes = \str ->
-    trimmed = Str.trim str
-
-    Str.startsWith trimmed doubleQuote && Str.endsWith trimmed doubleQuote
+isWrappedInDoubleQuotes = \str -> isWrappedIn doubleQuote str
 
 expect isWrappedInDoubleQuotes "\"abc\"" == Bool.true
 expect isWrappedInDoubleQuotes "\"abc'" == Bool.false
 expect isWrappedInDoubleQuotes "'abc\"" == Bool.false
 expect isWrappedInDoubleQuotes "'abc'" == Bool.false
 expect isWrappedInDoubleQuotes "abc" == Bool.false
+
+isWrappedIn : Str, Str -> Bool
+isWrappedIn = \wrapper, str ->
+    trimmed = Str.trim str
+
+    Str.startsWith trimmed wrapper && Str.endsWith trimmed wrapper
 
 stripDoubleQuotes : Str -> Str
 stripDoubleQuotes = \str ->
