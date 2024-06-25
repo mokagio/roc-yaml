@@ -3,6 +3,8 @@ module [
     parse,
 ]
 
+import UTF8
+
 YAML := {}
 
 KeyValue : { key : Str, value : List Value }
@@ -60,21 +62,11 @@ processRawStrIntoValue = \rawStr ->
             Ok value -> Boolean value
             Err _ -> String trimmed
 
-isDigit : U8 -> Bool
-isDigit = \b -> b >= '0' && b <= '9'
-
-expect isDigit '0' == Bool.true
-expect isDigit '1' == Bool.true
-expect isDigit '8' == Bool.true
-expect isDigit '9' == Bool.true
-expect isDigit 'a' == Bool.false
-expect isDigit '-' == Bool.false
-
 isInteger : Str -> Bool
 isInteger = \str ->
     trimmed = Str.trim str
 
-    Str.walkUtf8 trimmed Bool.true \answer, byte -> answer && isDigit byte == Bool.true
+    Str.walkUtf8 trimmed Bool.true \answer, byte -> answer && UTF8.isDigit byte == Bool.true
 
 expect isInteger "123" == Bool.true
 expect isInteger "abc" == Bool.false
