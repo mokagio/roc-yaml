@@ -67,6 +67,33 @@ expect isDigit '-' == Bool.false
 
 colon = ":"
 
+doubleQuote = "\""
+singleQuote = "'"
+
+isWrappedInDoubleQuotes : Str -> Bool
+isWrappedInDoubleQuotes = \str ->
+    trimmed = Str.trim str
+
+    Str.startsWith trimmed doubleQuote && Str.endsWith trimmed doubleQuote
+
+isWrappedInSingleQuotes : Str -> Bool
+isWrappedInSingleQuotes = \str ->
+    trimmed = Str.trim str
+
+    Str.startsWith trimmed singleQuote && Str.endsWith trimmed singleQuote
+
+expect isWrappedInSingleQuotes "\"abc\"" == Bool.false
+expect isWrappedInSingleQuotes "\"abc'" == Bool.false
+expect isWrappedInSingleQuotes "'abc\"" == Bool.false
+expect isWrappedInSingleQuotes "'abc'" == Bool.true
+expect isWrappedInSingleQuotes "abc" == Bool.false
+
+expect isWrappedInDoubleQuotes "\"abc\"" == Bool.true
+expect isWrappedInDoubleQuotes "\"abc'" == Bool.false
+expect isWrappedInDoubleQuotes "'abc\"" == Bool.false
+expect isWrappedInDoubleQuotes "'abc'" == Bool.false
+expect isWrappedInDoubleQuotes "abc" == Bool.false
+
 expect parse "key: value" == Ok { key: "key", value: [String "value"] }
 expect parse "key: other value" == Ok { key: "key", value: [String "other value"] }
 expect parse "other_key: yet other value" == Ok { key: "other_key", value: [String "yet other value"] }
