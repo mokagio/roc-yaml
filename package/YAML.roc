@@ -55,10 +55,11 @@ processRawStrIntoValue = \rawStr ->
     else if isWrappedInSingleQuotes trimmed then
         String (stripSingleQuotes trimmed)
     else if isWrappedIn trimmed '[' ']' then
-        Array (
-            Str.split (Str.replaceEach (Str.replaceEach trimmed "]" "") "[" "") ","
-            |> List.map processRawStrIntoValue
-        )
+        Array
+            (
+                Str.split (Str.replaceFirst (Str.replaceLast trimmed "]" "") "[" "") ","
+                |> List.map processRawStrIntoValue
+            )
     else if isInteger trimmed then
         when Str.toDec trimmed is
             Ok value -> Decimal value
