@@ -20,13 +20,25 @@ Value : [
 
 parse : Str -> Result KeyValue [ListWasEmpty] # TODO: Use custom error type(s)
 parse = \input ->
-    when getKeyFromKeyValueLine input is
-        Ok key ->
-            when getValueFromKeyValueLine input is
-                Ok value -> Ok { key, value: value }
-                _ -> Err ListWasEmpty
 
-        _ -> Err ListWasEmpty
+    if Str.contains input "[" then
+        # FIXME: Old implementation for strings with arrays
+        when getKeyFromKeyValueLine input is
+            Ok key ->
+                when getValueFromKeyValueLine input is
+                    Ok value -> Ok { key, value: value }
+                    _ -> Err ListWasEmpty
+
+            _ -> Err ListWasEmpty
+    else
+        when List.walkUntil (Str.toUtf8 input) Start parseHelper is
+            LookingForValueEnd _ key valueBytes ->
+                when Str.fromUtf8 valueBytes is
+                    Ok value -> Ok { key, value: processRawStrIntoValue value }
+                    _ -> Err ListWasEmpty
+
+            _ ->
+                Err ListWasEmpty
 
 # get key from value from line with key: value
 getKeyFromKeyValueLine : Str -> Result Str [ListWasEmpty] # TODO: Add different error for line without :
@@ -133,6 +145,41 @@ expect isWrappedIn "'abc' " '\'' '\'' == Bool.true
 expect isWrappedIn "'abc'   " '\'' '\'' == Bool.true
 expect isWrappedIn "   'abc'" '\'' '\'' == Bool.true
 expect isWrappedIn "  'abc'   " '\'' '\'' == Bool.true
+
+parseHelper : ParsingState, U8 -> [Continue ParsingState, Break ParsingState]
+parseHelper = \state, byte ->
+    when (state, byte) is
+        (Start, b) if UTF8.isWhiteSpace b -> Continue (LookingForKey (b + 1))
+        (Start, b) if UTF8.isAlpha b || UTF8.isDigit b -> Continue (LookingForColon (b + 1) [b])
+        (LookingForColon n tempKey, b) if b != UTF8.colon -> Continue (LookingForColon (n + 1) (List.append tempKey b))
+        (LookingForColon n tempKey, b) if b == UTF8.colon ->
+            when Str.fromUtf8 tempKey is
+                Ok key -> Continue (LookingForValue (n + 1) key)
+                Err _ -> Break Invalid
+
+        (LookingForValue n key, b) if UTF8.isWhiteSpace b -> Continue (LookingForValue (n + 1) key)
+        (LookingForValue n key, b) if UTF8.isAlpha b || UTF8.isDigit b || UTF8.doubleQuote == b || UTF8.singleQuote == b -> Continue (LookingForValueEnd (n + 1) key [b])
+        (LookingForValueEnd n key tempValue, b) ->
+            # TODO: support \n, etc.
+            Continue (LookingForValueEnd (n + 1) key (List.append tempValue b))
+
+        # TODO: How do we handle the end of the input?
+        _ ->
+            Break Invalid
+
+ParsingState : [
+    Start,
+    LookingForKey CurrentByte, # TODO: This works just for the first key, we'll need to add KeyValue or something to support multiple keys
+    LookingForColon CurrentByte TempKey, # TODO: This works just for the first key, we'll need to add KeyValue or something to support multiple keys
+    LookingForValue CurrentByte Key,
+    LookingForValueEnd CurrentByte Key TempValue,
+    Invalid,
+]
+
+CurrentByte : U8
+TempKey : List U8
+Key : Str
+TempValue : List U8
 
 isWrappedInHelper : U8, U8 -> (WrappedSearchState, U8 -> [Continue WrappedSearchState, Break WrappedSearchState])
 isWrappedInHelper = \startWrapper, endWrapper ->
