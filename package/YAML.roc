@@ -57,7 +57,7 @@ parse = \input ->
                 Ok valueStr -> Ok (Map { key, value: processRawStrIntoValue valueStr })
                 _ -> Err ListWasEmpty
 
-        LookingForNewLine _ key value -> Ok (Map { key, value })
+        LookingForNewLine _ node -> Ok node
         _ -> Err ListWasEmpty
 
 parseHelper : ParsingState, U8 -> [Continue ParsingState, Break ParsingState]
@@ -91,7 +91,7 @@ parseHelper = \state, byte ->
 
         (LookingForNextValueEndInMapSequence n key tempValue previousValues, b) if b == ']' ->
             when Str.fromUtf8 tempValue is
-                Ok value -> Continue (LookingForNewLine (n + 1) key (Sequence (List.append previousValues (processRawStrIntoValue value))))
+                Ok value -> Continue (LookingForNewLine (n + 1) (Map { key, value: Sequence (List.append previousValues (processRawStrIntoValue value)) }))
                 Err _ -> Break Invalid
 
         (LookingForNextValueEndInMapSequence n key tempValue previousValues, b) ->
@@ -109,7 +109,7 @@ ParsingState : [
     LookingForValueEnd CurrentByte Key TempValue,
     LookingForNextValueInMapSequence CurrentByte Key PreviousValues,
     LookingForNextValueEndInMapSequence CurrentByte Key TempValue PreviousValues,
-    LookingForNewLine CurrentByte Key Value,
+    LookingForNewLine CurrentByte Node, # TODO: This only work if there was a full node on the line...
     Invalid,
 ]
 
