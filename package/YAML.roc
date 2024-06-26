@@ -72,7 +72,7 @@ parseHelper = \state, byte ->
                 Err _ -> Break Invalid
 
         (LookingForValue n key, b) if UTF8.isWhiteSpace b -> Continue (LookingForValue (n + 1) key)
-        (LookingForValue n key, b) if b == '[' -> Continue (LookingForNextValueInSequence (n + 1) key [])
+        (LookingForValue n key, b) if b == '[' -> Continue (LookingForNextValueInMapSequence (n + 1) key [])
         (LookingForValue n key, b) if UTF8.isAlpha b || UTF8.isDigit b || UTF8.doubleQuote == b || UTF8.singleQuote == b ->
             Continue (LookingForValueEnd (n + 1) key [b])
 
@@ -80,22 +80,22 @@ parseHelper = \state, byte ->
             # TODO: support \n, etc.
             Continue (LookingForValueEnd (n + 1) key (List.append tempValue b))
 
-        (LookingForNextValueInSequence n key previousValues, b) if UTF8.isWhiteSpace b -> Continue (LookingForNextValueInSequence (n + 1) key previousValues)
-        (LookingForNextValueInSequence n key previousValues, b) if UTF8.isAlpha b || UTF8.isDigit b || UTF8.doubleQuote == b || UTF8.singleQuote == b ->
-            Continue (LookingForNextValueEndInSequence (n + 1) key [b] previousValues)
+        (LookingForNextValueInMapSequence n key previousValues, b) if UTF8.isWhiteSpace b -> Continue (LookingForNextValueInMapSequence (n + 1) key previousValues)
+        (LookingForNextValueInMapSequence n key previousValues, b) if UTF8.isAlpha b || UTF8.isDigit b || UTF8.doubleQuote == b || UTF8.singleQuote == b ->
+            Continue (LookingForNextValueEndInMapSequence (n + 1) key [b] previousValues)
 
-        (LookingForNextValueEndInSequence n key tempValue previousValues, b) if b == ',' ->
+        (LookingForNextValueEndInMapSequence n key tempValue previousValues, b) if b == ',' ->
             when Str.fromUtf8 tempValue is
-                Ok value -> Continue (LookingForNextValueInSequence (n + 1) key (List.append previousValues (processRawStrIntoValue value)))
+                Ok value -> Continue (LookingForNextValueInMapSequence (n + 1) key (List.append previousValues (processRawStrIntoValue value)))
                 Err _ -> Break Invalid
 
-        (LookingForNextValueEndInSequence n key tempValue previousValues, b) if b == ']' ->
+        (LookingForNextValueEndInMapSequence n key tempValue previousValues, b) if b == ']' ->
             when Str.fromUtf8 tempValue is
                 Ok value -> Continue (LookingForNewLine (n + 1) key (Sequence (List.append previousValues (processRawStrIntoValue value))))
                 Err _ -> Break Invalid
 
-        (LookingForNextValueEndInSequence n key tempValue previousValues, b) ->
-            Continue (LookingForNextValueEndInSequence (n + 1) key (List.append tempValue b) previousValues)
+        (LookingForNextValueEndInMapSequence n key tempValue previousValues, b) ->
+            Continue (LookingForNextValueEndInMapSequence (n + 1) key (List.append tempValue b) previousValues)
 
         # TODO: How do we handle the end of the input?
         _ ->
@@ -107,8 +107,8 @@ ParsingState : [
     LookingForColon CurrentByte TempKey, # TODO: This works just for the first key, we'll need to add Map or something to support multiple keys
     LookingForValue CurrentByte Key,
     LookingForValueEnd CurrentByte Key TempValue,
-    LookingForNextValueInSequence CurrentByte Key PreviousValues,
-    LookingForNextValueEndInSequence CurrentByte Key TempValue PreviousValues,
+    LookingForNextValueInMapSequence CurrentByte Key PreviousValues,
+    LookingForNextValueEndInMapSequence CurrentByte Key TempValue PreviousValues,
     LookingForNewLine CurrentByte Key Value,
     Invalid,
 ]
