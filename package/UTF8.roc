@@ -3,6 +3,7 @@ module [
     singleQuote,
     doubleQuote,
     isDigit,
+    isWhiteSpace,
 ]
 
 ## Opaque type for UTF-8 utils
@@ -22,3 +23,18 @@ expect isDigit '8' == Bool.true
 expect isDigit '9' == Bool.true
 expect isDigit 'a' == Bool.false
 expect isDigit '-' == Bool.false
+
+# TODO: There might be more of these
+isWhiteSpace : U8 -> Bool
+isWhiteSpace = \byte ->
+    when byte is
+        ' ' | '\t' | '\n' | '\r' -> Bool.true # space (32), tab (9), newline (10), carriage return (13)
+        _ -> Bool.false
+
+expect isWhiteSpace ' ' == Bool.true
+expect isWhiteSpace 'a' == Bool.false
+expect isWhiteSpace '1' == Bool.false
+expect isWhiteSpace '-' == Bool.false
+expect isWhiteSpace '\t' == Bool.true
+expect isWhiteSpace '\n' == Bool.true
+expect isWhiteSpace '\r' == Bool.true
