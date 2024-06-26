@@ -1,7 +1,9 @@
 module [
     UTF8,
+    colon,
     singleQuote,
     doubleQuote,
+    isAlpha,
     isDigit,
     isWhiteSpace,
 ]
@@ -9,6 +11,7 @@ module [
 ## Opaque type for UTF-8 utils
 UTF8 := {}
 
+colon = ':'
 singleQuote = '\''
 doubleQuote = '"'
 
@@ -38,3 +41,14 @@ expect isWhiteSpace '-' == Bool.false
 expect isWhiteSpace '\t' == Bool.true
 expect isWhiteSpace '\n' == Bool.true
 expect isWhiteSpace '\r' == Bool.true
+
+isAlpha : U8 -> Bool
+isAlpha = \b ->
+    b >= 'a' && b <= 'z' || b >= 'A' && b <= 'Z'
+
+expect isAlpha 'a' == Bool.true
+expect isAlpha 'g' == Bool.true
+expect isAlpha 'N' == Bool.true
+expect isAlpha 'Z' == Bool.true
+expect isAlpha '0' == Bool.false
+expect isAlpha '!' == Bool.false
