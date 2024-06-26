@@ -32,15 +32,19 @@ Map : { key : Key, value : Value }
 Sequence : List Value
 
 Value : [
-    String Str,
-    Decimal Dec,
-    Boolean Bool,
+    Scalar Scalar,
     Sequence (List Value), # can't use Sequence Sequence because of it's self-recursive
+    Map { key : Key, value : Value },
 ]
 
 parse : Str -> Result Node [ListWasEmpty] # TODO: Use custom error type(s)
 parse = \input ->
     when List.walkUntil (Str.toUtf8 input) Start parseHelper is
+        LookingForColon _ strBytes ->
+            when Str.fromUtf8 strBytes is
+                Ok valueStr -> Ok (processRawStrIntoValue valueStr)
+                Err _ -> Err ListWasEmpty
+
         LookingForValueEnd _ key valueBytes ->
             when Str.fromUtf8 valueBytes is
                 Ok valueStr -> Ok (Map { key, value: processRawStrIntoValue valueStr })
@@ -55,9 +59,9 @@ processRawStrIntoValue = \rawStr ->
 
     # If the string is wrapped in quotes, then it can't be anything other than a string
     if isWrappedInDoubleQuotes trimmed then
-        String (stripDoubleQuotes trimmed)
+        Scalar (String (stripDoubleQuotes trimmed))
     else if isWrappedInSingleQuotes trimmed then
-        String (stripSingleQuotes trimmed)
+        Scalar (String (stripSingleQuotes trimmed))
     else if isWrappedIn trimmed '[' ']' then
         Sequence
             (
@@ -66,12 +70,12 @@ processRawStrIntoValue = \rawStr ->
             )
     else if isInteger trimmed then
         when Str.toDec trimmed is
-            Ok value -> Decimal value
-            Err _ -> String "failed to decode number"
+            Ok value -> Scalar (Decimal value)
+            Err _ -> Scalar (String "failed to decode number")
     else
         when toBool trimmed is
-            Ok value -> Boolean value
-            Err _ -> String trimmed
+            Ok value -> Scalar (Boolean value)
+            Err _ -> Scalar (String trimmed)
 
 isInteger : Str -> Bool
 isInteger = \str ->
@@ -238,24 +242,24 @@ expect stripSingleQuotes "abc'" == "abc"
 expect stripSingleQuotes "abc''" == "abc"
 expect stripSingleQuotes "''abc'" == "'abc"
 
-expect parse "key: value" == Ok (Map { key: "key", value: String "value" })
-expect parse "key: other value" == Ok (Map { key: "key", value: String "other value" })
-expect parse "other_key: yet other value" == Ok (Map { key: "other_key", value: String "yet other value" })
-expect parse "key: 1" == Ok (Map { key: "key", value: Decimal 1 })
-expect parse "key: true" == Ok (Map { key: "key", value: Boolean Bool.true })
-expect parse "k: false" == Ok (Map { key: "k", value: Boolean Bool.false })
-expect parse "k:    false" == Ok (Map { key: "k", value: Boolean Bool.false })
-expect parse "k: false " == Ok (Map { key: "k", value: Boolean Bool.false })
-expect parse "k: fa lse " == Ok (Map { key: "k", value: String "fa lse" })
-expect parse "key: \"true\"" == Ok (Map { key: "key", value: String "true" })
-expect parse "key: 'true'" == Ok (Map { key: "key", value: String "true" })
-expect parse "key: [1,2]" == Ok (Map { key: "key", value: Sequence [Decimal 1, Decimal 2] })
-expect parse "key: [1]" == Ok (Map { key: "key", value: Sequence [Decimal 1] })
-expect parse "key: [a, b]" == Ok (Map { key: "key", value: Sequence [String "a", String "b"] })
-expect parse "key: [b, 1]" == Ok (Map { key: "key", value: Sequence [String "b", Decimal 1] })
+expect parse "key: value" == Ok (Map { key: "key", value: Scalar (String "value") })
+expect parse "key: other value" == Ok (Map { key: "key", value: Scalar (String "other value") })
+expect parse "other_key: yet other value" == Ok (Map { key: "other_key", value: Scalar (String "yet other value") })
+expect parse "key: 1" == Ok (Map { key: "key", value: Scalar (Decimal 1) })
+expect parse "key: true" == Ok (Map { key: "key", value: Scalar (Boolean Bool.true) })
+expect parse "k: false" == Ok (Map { key: "k", value: Scalar (Boolean Bool.false) })
+expect parse "k:    false" == Ok (Map { key: "k", value: Scalar (Boolean Bool.false) })
+expect parse "k: false " == Ok (Map { key: "k", value: Scalar (Boolean Bool.false) })
+expect parse "k: fa lse " == Ok (Map { key: "k", value: Scalar (String "fa lse") })
+expect parse "key: \"true\"" == Ok (Map { key: "key", value: Scalar (String "true") })
+expect parse "key: 'true'" == Ok (Map { key: "key", value: Scalar (String "true") })
+expect parse "key: [1,2]" == Ok (Map { key: "key", value: Sequence [Scalar (Decimal 1), Scalar (Decimal 2)] })
+expect parse "key: [1]" == Ok (Map { key: "key", value: Sequence [Scalar (Decimal 1)] })
+expect parse "key: [a, b]" == Ok (Map { key: "key", value: Sequence [Scalar (String "a"), Scalar (String "b")] })
+expect parse "key: [b, 1]" == Ok (Map { key: "key", value: Sequence [Scalar (String "b"), Scalar (Decimal 1)] })
 # TODO: Nested lists
 # expect parse "key: [c, [1,2]]" == Ok (Map { key: "key", value: Sequence [String "c", Sequence [Decimal 1, Decimal 2]] })
-expect parse "not a YAML" == Err ListWasEmpty
+expect parse "not a YAML" == Ok (Scalar (String "not a YAML"))
 
 singleQuote = "'"
 doubleQuote = "\""
