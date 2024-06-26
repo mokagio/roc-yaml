@@ -18,6 +18,7 @@ Scalar : [
     String Str,
     Decimal Dec,
     Boolean Bool,
+    # TODO: What else?
 ]
 
 ## The content of a mapping node is an unordered set of key: value node pairs, with the restriction that each of the keys is unique.
@@ -34,18 +35,18 @@ Value : [
     String Str,
     Decimal Dec,
     Boolean Bool,
-    Sequence (List Value), # can't use Sequence Sequence because of it's self-cyclical
+    Sequence (List Value), # can't use Sequence Sequence because of it's self-recursive
 ]
 
-parse : Str -> Result Map [ListWasEmpty] # TODO: Use custom error type(s)
+parse : Str -> Result Node [ListWasEmpty] # TODO: Use custom error type(s)
 parse = \input ->
     when List.walkUntil (Str.toUtf8 input) Start parseHelper is
         LookingForValueEnd _ key valueBytes ->
             when Str.fromUtf8 valueBytes is
-                Ok value -> Ok { key, value: processRawStrIntoValue value }
+                Ok valueStr -> Ok (Map { key, value: processRawStrIntoValue valueStr })
                 _ -> Err ListWasEmpty
 
-        LookingForNewLine _ key value -> Ok { key, value }
+        LookingForNewLine _ key value -> Ok (Map { key, value })
         _ -> Err ListWasEmpty
 
 processRawStrIntoValue : Str -> Value
@@ -237,23 +238,23 @@ expect stripSingleQuotes "abc'" == "abc"
 expect stripSingleQuotes "abc''" == "abc"
 expect stripSingleQuotes "''abc'" == "'abc"
 
-expect parse "key: value" == Ok { key: "key", value: String "value" }
-expect parse "key: other value" == Ok { key: "key", value: String "other value" }
-expect parse "other_key: yet other value" == Ok { key: "other_key", value: String "yet other value" }
-expect parse "key: 1" == Ok { key: "key", value: Decimal 1 }
-expect parse "key: true" == Ok { key: "key", value: Boolean Bool.true }
-expect parse "k: false" == Ok { key: "k", value: Boolean Bool.false }
-expect parse "k:    false" == Ok { key: "k", value: Boolean Bool.false }
-expect parse "k: false " == Ok { key: "k", value: Boolean Bool.false }
-expect parse "k: fa lse " == Ok { key: "k", value: String "fa lse" }
-expect parse "key: \"true\"" == Ok { key: "key", value: String "true" }
-expect parse "key: 'true'" == Ok { key: "key", value: String "true" }
-expect parse "key: [1,2]" == Ok { key: "key", value: Sequence [Decimal 1, Decimal 2] }
-expect parse "key: [1]" == Ok { key: "key", value: Sequence [Decimal 1] }
-expect parse "key: [a, b]" == Ok { key: "key", value: Sequence [String "a", String "b"] }
-expect parse "key: [b, 1]" == Ok { key: "key", value: Sequence [String "b", Decimal 1] }
+expect parse "key: value" == Ok (Map { key: "key", value: String "value" })
+expect parse "key: other value" == Ok (Map { key: "key", value: String "other value" })
+expect parse "other_key: yet other value" == Ok (Map { key: "other_key", value: String "yet other value" })
+expect parse "key: 1" == Ok (Map { key: "key", value: Decimal 1 })
+expect parse "key: true" == Ok (Map { key: "key", value: Boolean Bool.true })
+expect parse "k: false" == Ok (Map { key: "k", value: Boolean Bool.false })
+expect parse "k:    false" == Ok (Map { key: "k", value: Boolean Bool.false })
+expect parse "k: false " == Ok (Map { key: "k", value: Boolean Bool.false })
+expect parse "k: fa lse " == Ok (Map { key: "k", value: String "fa lse" })
+expect parse "key: \"true\"" == Ok (Map { key: "key", value: String "true" })
+expect parse "key: 'true'" == Ok (Map { key: "key", value: String "true" })
+expect parse "key: [1,2]" == Ok (Map { key: "key", value: Sequence [Decimal 1, Decimal 2] })
+expect parse "key: [1]" == Ok (Map { key: "key", value: Sequence [Decimal 1] })
+expect parse "key: [a, b]" == Ok (Map { key: "key", value: Sequence [String "a", String "b"] })
+expect parse "key: [b, 1]" == Ok (Map { key: "key", value: Sequence [String "b", Decimal 1] })
 # TODO: Nested lists
-# expect parse "key: [c, [1,2]]" == Ok { key: "key", value: Sequence [String "c", Sequence [Decimal 1, Decimal 2]] }
+# expect parse "key: [c, [1,2]]" == Ok (Map { key: "key", value: Sequence [String "c", Sequence [Decimal 1, Decimal 2]] })
 expect parse "not a YAML" == Err ListWasEmpty
 
 singleQuote = "'"
