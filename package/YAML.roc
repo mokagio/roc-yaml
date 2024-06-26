@@ -5,6 +5,7 @@ module [
 
 import UTF8
 
+## https://yaml.org/spec/1.1/current.html
 YAML := {}
 
 KeyValue : { key : Str, value : Value }
@@ -13,7 +14,8 @@ Value : [
     String Str,
     Decimal Dec,
     Boolean Bool,
-    Array (List Value),
+    # https://yaml.org/spec/1.1/current.html#sequence/information%20model
+    Sequence (List Value),
 ]
 
 parse : Str -> Result KeyValue [ListWasEmpty] # TODO: Use custom error type(s)
@@ -55,7 +57,7 @@ processRawStrIntoValue = \rawStr ->
     else if isWrappedInSingleQuotes trimmed then
         String (stripSingleQuotes trimmed)
     else if isWrappedIn trimmed '[' ']' then
-        Array
+        Sequence
             (
                 Str.split (Str.replaceFirst (Str.replaceLast trimmed "]" "") "[" "") ","
                 |> List.map processRawStrIntoValue
@@ -188,12 +190,12 @@ expect parse "k: false " == Ok { key: "k", value: Boolean Bool.false }
 expect parse "k: fa lse " == Ok { key: "k", value: String "fa lse" }
 expect parse "key: \"true\"" == Ok { key: "key", value: String "true" }
 expect parse "key: 'true'" == Ok { key: "key", value: String "true" }
-expect parse "key: [1,2]" == Ok { key: "key", value: Array [Decimal 1, Decimal 2] }
-expect parse "key: [1]" == Ok { key: "key", value: Array [Decimal 1] }
-expect parse "key: [a, b]" == Ok { key: "key", value: Array [String "a", String "b"] }
-expect parse "key: [b, 1]" == Ok { key: "key", value: Array [String "b", Decimal 1] }
+expect parse "key: [1,2]" == Ok { key: "key", value: Sequence [Decimal 1, Decimal 2] }
+expect parse "key: [1]" == Ok { key: "key", value: Sequence [Decimal 1] }
+expect parse "key: [a, b]" == Ok { key: "key", value: Sequence [String "a", String "b"] }
+expect parse "key: [b, 1]" == Ok { key: "key", value: Sequence [String "b", Decimal 1] }
 # TODO: Nested lists
-# expect parse "key: [c, [1,2]]" == Ok { key: "key", value: [String "c", [Decimal 1, Decimal 2]] }
+# expect parse "key: [c, [1,2]]" == Ok { key: "key", value: Sequence [String "c", Sequence [Decimal 1, Decimal 2]] }
 expect parse "not a YAML" == Err ListWasEmpty
 
 singleQuote = "'"
