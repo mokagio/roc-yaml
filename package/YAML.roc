@@ -20,44 +20,14 @@ Value : [
 
 parse : Str -> Result KeyValue [ListWasEmpty] # TODO: Use custom error type(s)
 parse = \input ->
+    when List.walkUntil (Str.toUtf8 input) Start parseHelper is
+        LookingForValueEnd _ key valueBytes ->
+            when Str.fromUtf8 valueBytes is
+                Ok value -> Ok { key, value: processRawStrIntoValue value }
+                _ -> Err ListWasEmpty
 
-    if Str.contains input "[" then
-        # FIXME: Old implementation for strings with arrays
-        when getKeyFromKeyValueLine input is
-            Ok key ->
-                when getValueFromKeyValueLine input is
-                    Ok value -> Ok { key, value: value }
-                    _ -> Err ListWasEmpty
-
-            _ -> Err ListWasEmpty
-    else
-        when List.walkUntil (Str.toUtf8 input) Start parseHelper is
-            LookingForValueEnd _ key valueBytes ->
-                when Str.fromUtf8 valueBytes is
-                    Ok value -> Ok { key, value: processRawStrIntoValue value }
-                    _ -> Err ListWasEmpty
-
-            _ ->
-                Err ListWasEmpty
-
-# get key from value from line with key: value
-getKeyFromKeyValueLine : Str -> Result Str [ListWasEmpty] # TODO: Add different error for line without :
-getKeyFromKeyValueLine = \input ->
-    if Str.contains input colon then
-        Str.split input colon
-        |> List.first
-        |> Result.map Str.trim # FIXME: Indentation matters in YAML
-    else
-        Err ListWasEmpty
-
-getValueFromKeyValueLine : Str -> Result Value [ListWasEmpty] # TODO: Add different error for line without :
-getValueFromKeyValueLine = \input ->
-    if Str.contains input colon then
-        Str.split input colon
-        |> List.last
-        |> Result.map processRawStrIntoValue
-    else
-        Err ListWasEmpty
+        LookingForNewLine _ key value -> Ok { key, value }
+        _ -> Err ListWasEmpty
 
 processRawStrIntoValue : Str -> Value
 processRawStrIntoValue = \rawStr ->
@@ -109,8 +79,6 @@ expect toBool "rue" == Err NotABoolean
 expect toBool " true" == Err NotABoolean
 expect toBool "false " == Err NotABoolean
 
-colon = ":"
-
 isWrappedInSingleQuotes : Str -> Bool
 isWrappedInSingleQuotes = \str -> isWrappedIn str UTF8.singleQuote UTF8.singleQuote
 
@@ -158,10 +126,30 @@ parseHelper = \state, byte ->
                 Err _ -> Break Invalid
 
         (LookingForValue n key, b) if UTF8.isWhiteSpace b -> Continue (LookingForValue (n + 1) key)
-        (LookingForValue n key, b) if UTF8.isAlpha b || UTF8.isDigit b || UTF8.doubleQuote == b || UTF8.singleQuote == b -> Continue (LookingForValueEnd (n + 1) key [b])
+        (LookingForValue n key, b) if b == '[' -> Continue (LookingForNextValueInSequence (n + 1) key [])
+        (LookingForValue n key, b) if UTF8.isAlpha b || UTF8.isDigit b || UTF8.doubleQuote == b || UTF8.singleQuote == b ->
+            Continue (LookingForValueEnd (n + 1) key [b])
+
         (LookingForValueEnd n key tempValue, b) ->
             # TODO: support \n, etc.
             Continue (LookingForValueEnd (n + 1) key (List.append tempValue b))
+
+        (LookingForNextValueInSequence n key previousValues, b) if UTF8.isWhiteSpace b -> Continue (LookingForNextValueInSequence (n + 1) key previousValues)
+        (LookingForNextValueInSequence n key previousValues, b) if UTF8.isAlpha b || UTF8.isDigit b || UTF8.doubleQuote == b || UTF8.singleQuote == b ->
+            Continue (LookingForNextValueEndInSequence (n + 1) key [b] previousValues)
+
+        (LookingForNextValueEndInSequence n key tempValue previousValues, b) if b == ',' ->
+            when Str.fromUtf8 tempValue is
+                Ok value -> Continue (LookingForNextValueInSequence (n + 1) key (List.append previousValues (processRawStrIntoValue value)))
+                Err _ -> Break Invalid
+
+        (LookingForNextValueEndInSequence n key tempValue previousValues, b) if b == ']' ->
+            when Str.fromUtf8 tempValue is
+                Ok value -> Continue (LookingForNewLine (n + 1) key (Sequence (List.append previousValues (processRawStrIntoValue value))))
+                Err _ -> Break Invalid
+
+        (LookingForNextValueEndInSequence n key tempValue previousValues, b) ->
+            Continue (LookingForNextValueEndInSequence (n + 1) key (List.append tempValue b) previousValues)
 
         # TODO: How do we handle the end of the input?
         _ ->
@@ -173,6 +161,9 @@ ParsingState : [
     LookingForColon CurrentByte TempKey, # TODO: This works just for the first key, we'll need to add KeyValue or something to support multiple keys
     LookingForValue CurrentByte Key,
     LookingForValueEnd CurrentByte Key TempValue,
+    LookingForNextValueInSequence CurrentByte Key PreviousValues,
+    LookingForNextValueEndInSequence CurrentByte Key TempValue PreviousValues,
+    LookingForNewLine CurrentByte Key Value,
     Invalid,
 ]
 
@@ -180,6 +171,7 @@ CurrentByte : U8
 TempKey : List U8
 Key : Str
 TempValue : List U8
+PreviousValues : List Value
 
 isWrappedInHelper : U8, U8 -> (WrappedSearchState, U8 -> [Continue WrappedSearchState, Break WrappedSearchState])
 isWrappedInHelper = \startWrapper, endWrapper ->
