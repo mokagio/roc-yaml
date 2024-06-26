@@ -65,6 +65,7 @@ parseHelper = \state, byte ->
     when (state, byte) is
         (Start, b) if UTF8.isWhiteSpace b -> Continue (LookingForKey (b + 1))
         (Start, b) if UTF8.isAlpha b || UTF8.isDigit b -> Continue (LookingForColon (b + 1) [b])
+        (Start, b) if '[' == b -> Continue (LookingForNextValueInSequence (b + 1) [])
         (LookingForColon n tempKey, b) if b != UTF8.colon -> Continue (LookingForColon (n + 1) (List.append tempKey b))
         (LookingForColon n tempKey, b) if b == UTF8.colon ->
             when Str.fromUtf8 tempKey is
@@ -79,6 +80,20 @@ parseHelper = \state, byte ->
         (LookingForValueEnd n key tempValue, b) ->
             # TODO: support \n, etc.
             Continue (LookingForValueEnd (n + 1) key (List.append tempValue b))
+
+        (LookingForNextValueInSequence n previousValues, b) if UTF8.isWhiteSpace b -> Continue (LookingForNextValueInSequence (n + 1) previousValues)
+        (LookingForNextValueInSequence n previousValues, b) if UTF8.isAlpha b || UTF8.isDigit b || UTF8.doubleQuote == b || UTF8.singleQuote == b ->
+            Continue (LookingForNextValueEndInSequence (n + 1) [b] previousValues)
+
+        (LookingForNextValueEndInSequence n tempValue previousValues, b) if b == ',' ->
+            when Str.fromUtf8 tempValue is
+                Ok value -> Continue (LookingForNextValueInSequence (n + 1) (List.append previousValues (processRawStrIntoValue value)))
+                Err _ -> Break Invalid
+
+        (LookingForNextValueEndInSequence n tempValue previousValues, b) if b == ']' ->
+            when Str.fromUtf8 tempValue is
+                Ok value -> Continue (LookingForNewLine (n + 1) (Sequence (List.append previousValues (processRawStrIntoValue value))))
+                Err _ -> Break Invalid
 
         (LookingForNextValueInMapSequence n key previousValues, b) if UTF8.isWhiteSpace b -> Continue (LookingForNextValueInMapSequence (n + 1) key previousValues)
         (LookingForNextValueInMapSequence n key previousValues, b) if UTF8.isAlpha b || UTF8.isDigit b || UTF8.doubleQuote == b || UTF8.singleQuote == b ->
@@ -107,6 +122,8 @@ ParsingState : [
     LookingForColon CurrentByte TempKey, # TODO: This works just for the first key, we'll need to add Map or something to support multiple keys
     LookingForValue CurrentByte Key,
     LookingForValueEnd CurrentByte Key TempValue,
+    LookingForNextValueInSequence CurrentByte PreviousValues,
+    LookingForNextValueEndInSequence CurrentByte TempValue PreviousValues,
     LookingForNextValueInMapSequence CurrentByte Key PreviousValues,
     LookingForNextValueEndInMapSequence CurrentByte Key TempValue PreviousValues,
     LookingForNewLine CurrentByte Node, # TODO: This only work if there was a full node on the line...
@@ -267,8 +284,8 @@ expect parse "key: [b, 1]" == Ok (Map { key: "key", value: Sequence [Scalar (Str
 expect parse "not a YAML" == Ok (Scalar (String "not a YAML"))
 # TODO: Nested lists
 # expect parse "key: [c, [1,2]]" == Ok (Map { key: "key", value: Sequence [String "c", Sequence [Decimal 1, Decimal 2]] })
-# TODO: Root level lists
-# expect parse "[1,2]" == Ok (Sequence [Scalar (Decimal 1), Scalar (Decimal 2)])
+expect parse "[1,2]" == Ok (Sequence [Scalar (Decimal 1), Scalar (Decimal 2)])
+expect parse "[1]" == Ok (Sequence [Scalar (Decimal 1)])
 
 singleQuote = "'"
 doubleQuote = "\""
