@@ -8,17 +8,36 @@ import UTF8
 ## https://yaml.org/spec/1.1/current.html
 YAML := {}
 
-KeyValue : { key : Str, value : Value }
+Node : [
+    Scalar Scalar,
+    Sequence Sequence,
+    Map Map,
+]
+
+Scalar : [
+    String Str,
+    Decimal Dec,
+    Boolean Bool,
+]
+
+## The content of a mapping node is an unordered set of key: value node pairs, with the restriction that each of the keys is unique.
+## YAML places no further restrictions on the nodes.
+## In particular, keys may be arbitrary nodes, the same node may be used as the value of several key: value pairs, and a mapping could even contain itself as a key or a value (directly or indirectly).
+##
+## https://yaml.org/spec/1.1/current.html#mapping/information%20model
+Map : { key : Key, value : Value }
+
+## https://yaml.org/spec/1.1/current.html#sequence/information%20model
+Sequence : List Value
 
 Value : [
     String Str,
     Decimal Dec,
     Boolean Bool,
-    # https://yaml.org/spec/1.1/current.html#sequence/information%20model
-    Sequence (List Value),
+    Sequence (List Value), # can't use Sequence Sequence because of it's self-cyclical
 ]
 
-parse : Str -> Result KeyValue [ListWasEmpty] # TODO: Use custom error type(s)
+parse : Str -> Result Map [ListWasEmpty] # TODO: Use custom error type(s)
 parse = \input ->
     when List.walkUntil (Str.toUtf8 input) Start parseHelper is
         LookingForValueEnd _ key valueBytes ->
@@ -157,8 +176,8 @@ parseHelper = \state, byte ->
 
 ParsingState : [
     Start,
-    LookingForKey CurrentByte, # TODO: This works just for the first key, we'll need to add KeyValue or something to support multiple keys
-    LookingForColon CurrentByte TempKey, # TODO: This works just for the first key, we'll need to add KeyValue or something to support multiple keys
+    LookingForKey CurrentByte, # TODO: This works just for the first key, we'll need to add Map or something to support multiple keys
+    LookingForColon CurrentByte TempKey, # TODO: This works just for the first key, we'll need to add Map or something to support multiple keys
     LookingForValue CurrentByte Key,
     LookingForValueEnd CurrentByte Key TempValue,
     LookingForNextValueInSequence CurrentByte Key PreviousValues,
