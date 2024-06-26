@@ -14,6 +14,11 @@ Node : [
     Map Map,
 ]
 
+## The content of a scalar node is an opaque datum that can be presented as a series of zero or more Unicode characters.
+##
+## TODO: This means that we might need to change the type to be a bag of characters? But then, how to get a Str, Dec, etc. out?
+##
+## https://yaml.org/spec/1.1/current.html#scalar/information%20model
 Scalar : [
     String Str,
     Decimal Dec,
@@ -33,9 +38,11 @@ Sequence : List Value
 
 Value : [
     Scalar Scalar,
-    Sequence (List Value), # can't use Sequence Sequence because of it's self-recursive
+    Sequence (List Value), # can't use Sequence Sequence because it would be self-recursive—roc_lang 2024-06-18-41ea2bfbc7d
     Map { key : Key, value : Value },
 ]
+
+Key : Str
 
 parse : Str -> Result Node [ListWasEmpty] # TODO: Use custom error type(s)
 parse = \input ->
@@ -53,6 +60,65 @@ parse = \input ->
         LookingForNewLine _ key value -> Ok (Map { key, value })
         _ -> Err ListWasEmpty
 
+parseHelper : ParsingState, U8 -> [Continue ParsingState, Break ParsingState]
+parseHelper = \state, byte ->
+    when (state, byte) is
+        (Start, b) if UTF8.isWhiteSpace b -> Continue (LookingForKey (b + 1))
+        (Start, b) if UTF8.isAlpha b || UTF8.isDigit b -> Continue (LookingForColon (b + 1) [b])
+        (LookingForColon n tempKey, b) if b != UTF8.colon -> Continue (LookingForColon (n + 1) (List.append tempKey b))
+        (LookingForColon n tempKey, b) if b == UTF8.colon ->
+            when Str.fromUtf8 tempKey is
+                Ok key -> Continue (LookingForValue (n + 1) key)
+                Err _ -> Break Invalid
+
+        (LookingForValue n key, b) if UTF8.isWhiteSpace b -> Continue (LookingForValue (n + 1) key)
+        (LookingForValue n key, b) if b == '[' -> Continue (LookingForNextValueInSequence (n + 1) key [])
+        (LookingForValue n key, b) if UTF8.isAlpha b || UTF8.isDigit b || UTF8.doubleQuote == b || UTF8.singleQuote == b ->
+            Continue (LookingForValueEnd (n + 1) key [b])
+
+        (LookingForValueEnd n key tempValue, b) ->
+            # TODO: support \n, etc.
+            Continue (LookingForValueEnd (n + 1) key (List.append tempValue b))
+
+        (LookingForNextValueInSequence n key previousValues, b) if UTF8.isWhiteSpace b -> Continue (LookingForNextValueInSequence (n + 1) key previousValues)
+        (LookingForNextValueInSequence n key previousValues, b) if UTF8.isAlpha b || UTF8.isDigit b || UTF8.doubleQuote == b || UTF8.singleQuote == b ->
+            Continue (LookingForNextValueEndInSequence (n + 1) key [b] previousValues)
+
+        (LookingForNextValueEndInSequence n key tempValue previousValues, b) if b == ',' ->
+            when Str.fromUtf8 tempValue is
+                Ok value -> Continue (LookingForNextValueInSequence (n + 1) key (List.append previousValues (processRawStrIntoValue value)))
+                Err _ -> Break Invalid
+
+        (LookingForNextValueEndInSequence n key tempValue previousValues, b) if b == ']' ->
+            when Str.fromUtf8 tempValue is
+                Ok value -> Continue (LookingForNewLine (n + 1) key (Sequence (List.append previousValues (processRawStrIntoValue value))))
+                Err _ -> Break Invalid
+
+        (LookingForNextValueEndInSequence n key tempValue previousValues, b) ->
+            Continue (LookingForNextValueEndInSequence (n + 1) key (List.append tempValue b) previousValues)
+
+        # TODO: How do we handle the end of the input?
+        _ ->
+            Break Invalid
+
+ParsingState : [
+    Start,
+    LookingForKey CurrentByte, # TODO: This works just for the first key, we'll need to add Map or something to support multiple keys
+    LookingForColon CurrentByte TempKey, # TODO: This works just for the first key, we'll need to add Map or something to support multiple keys
+    LookingForValue CurrentByte Key,
+    LookingForValueEnd CurrentByte Key TempValue,
+    LookingForNextValueInSequence CurrentByte Key PreviousValues,
+    LookingForNextValueEndInSequence CurrentByte Key TempValue PreviousValues,
+    LookingForNewLine CurrentByte Key Value,
+    Invalid,
+]
+
+CurrentByte : U8
+TempKey : List U8
+TempValue : List U8
+PreviousValues : List Value
+
+# TODO: Rewrite this as a walkUntil parser, too
 processRawStrIntoValue : Str -> Value
 processRawStrIntoValue = \rawStr ->
     trimmed = Str.trim rawStr # FIXME: Indentation matters in YAML
@@ -138,65 +204,6 @@ expect isWrappedIn "'abc'   " '\'' '\'' == Bool.true
 expect isWrappedIn "   'abc'" '\'' '\'' == Bool.true
 expect isWrappedIn "  'abc'   " '\'' '\'' == Bool.true
 
-parseHelper : ParsingState, U8 -> [Continue ParsingState, Break ParsingState]
-parseHelper = \state, byte ->
-    when (state, byte) is
-        (Start, b) if UTF8.isWhiteSpace b -> Continue (LookingForKey (b + 1))
-        (Start, b) if UTF8.isAlpha b || UTF8.isDigit b -> Continue (LookingForColon (b + 1) [b])
-        (LookingForColon n tempKey, b) if b != UTF8.colon -> Continue (LookingForColon (n + 1) (List.append tempKey b))
-        (LookingForColon n tempKey, b) if b == UTF8.colon ->
-            when Str.fromUtf8 tempKey is
-                Ok key -> Continue (LookingForValue (n + 1) key)
-                Err _ -> Break Invalid
-
-        (LookingForValue n key, b) if UTF8.isWhiteSpace b -> Continue (LookingForValue (n + 1) key)
-        (LookingForValue n key, b) if b == '[' -> Continue (LookingForNextValueInSequence (n + 1) key [])
-        (LookingForValue n key, b) if UTF8.isAlpha b || UTF8.isDigit b || UTF8.doubleQuote == b || UTF8.singleQuote == b ->
-            Continue (LookingForValueEnd (n + 1) key [b])
-
-        (LookingForValueEnd n key tempValue, b) ->
-            # TODO: support \n, etc.
-            Continue (LookingForValueEnd (n + 1) key (List.append tempValue b))
-
-        (LookingForNextValueInSequence n key previousValues, b) if UTF8.isWhiteSpace b -> Continue (LookingForNextValueInSequence (n + 1) key previousValues)
-        (LookingForNextValueInSequence n key previousValues, b) if UTF8.isAlpha b || UTF8.isDigit b || UTF8.doubleQuote == b || UTF8.singleQuote == b ->
-            Continue (LookingForNextValueEndInSequence (n + 1) key [b] previousValues)
-
-        (LookingForNextValueEndInSequence n key tempValue previousValues, b) if b == ',' ->
-            when Str.fromUtf8 tempValue is
-                Ok value -> Continue (LookingForNextValueInSequence (n + 1) key (List.append previousValues (processRawStrIntoValue value)))
-                Err _ -> Break Invalid
-
-        (LookingForNextValueEndInSequence n key tempValue previousValues, b) if b == ']' ->
-            when Str.fromUtf8 tempValue is
-                Ok value -> Continue (LookingForNewLine (n + 1) key (Sequence (List.append previousValues (processRawStrIntoValue value))))
-                Err _ -> Break Invalid
-
-        (LookingForNextValueEndInSequence n key tempValue previousValues, b) ->
-            Continue (LookingForNextValueEndInSequence (n + 1) key (List.append tempValue b) previousValues)
-
-        # TODO: How do we handle the end of the input?
-        _ ->
-            Break Invalid
-
-ParsingState : [
-    Start,
-    LookingForKey CurrentByte, # TODO: This works just for the first key, we'll need to add Map or something to support multiple keys
-    LookingForColon CurrentByte TempKey, # TODO: This works just for the first key, we'll need to add Map or something to support multiple keys
-    LookingForValue CurrentByte Key,
-    LookingForValueEnd CurrentByte Key TempValue,
-    LookingForNextValueInSequence CurrentByte Key PreviousValues,
-    LookingForNextValueEndInSequence CurrentByte Key TempValue PreviousValues,
-    LookingForNewLine CurrentByte Key Value,
-    Invalid,
-]
-
-CurrentByte : U8
-TempKey : List U8
-Key : Str
-TempValue : List U8
-PreviousValues : List Value
-
 isWrappedInHelper : U8, U8 -> (WrappedSearchState, U8 -> [Continue WrappedSearchState, Break WrappedSearchState])
 isWrappedInHelper = \startWrapper, endWrapper ->
     \state, byte ->
@@ -257,9 +264,11 @@ expect parse "key: [1,2]" == Ok (Map { key: "key", value: Sequence [Scalar (Deci
 expect parse "key: [1]" == Ok (Map { key: "key", value: Sequence [Scalar (Decimal 1)] })
 expect parse "key: [a, b]" == Ok (Map { key: "key", value: Sequence [Scalar (String "a"), Scalar (String "b")] })
 expect parse "key: [b, 1]" == Ok (Map { key: "key", value: Sequence [Scalar (String "b"), Scalar (Decimal 1)] })
+expect parse "not a YAML" == Ok (Scalar (String "not a YAML"))
 # TODO: Nested lists
 # expect parse "key: [c, [1,2]]" == Ok (Map { key: "key", value: Sequence [String "c", Sequence [Decimal 1, Decimal 2]] })
-expect parse "not a YAML" == Ok (Scalar (String "not a YAML"))
+# TODO: Root level lists
+# expect parse "[1,2]" == Ok (Sequence [Scalar (Decimal 1), Scalar (Decimal 2)])
 
 singleQuote = "'"
 doubleQuote = "\""
