@@ -82,6 +82,7 @@ parseHelper = \state, byte ->
             Continue (LookingForValueEnd (n + 1) key (List.append tempValue b))
 
         (LookingForNextValueInSequence n previousValues, b) if UTF8.isWhiteSpace b -> Continue (LookingForNextValueInSequence (n + 1) previousValues)
+        (LookingForNextValueInSequence n previousValues, b) if b == ']' -> Continue (LookingForNewLine (n + 1) (Sequence previousValues))
         (LookingForNextValueInSequence n previousValues, b) if UTF8.isAlpha b || UTF8.isDigit b || UTF8.doubleQuote == b || UTF8.singleQuote == b ->
             Continue (LookingForNextValueEndInSequence (n + 1) [b] previousValues)
 
@@ -286,6 +287,7 @@ expect parse "not a YAML" == Ok (Scalar (String "not a YAML"))
 # expect parse "key: [c, [1,2]]" == Ok (Map { key: "key", value: Sequence [String "c", Sequence [Decimal 1, Decimal 2]] })
 expect parse "[1,2]" == Ok (Sequence [Scalar (Decimal 1), Scalar (Decimal 2)])
 expect parse "[1]" == Ok (Sequence [Scalar (Decimal 1)])
+expect parse "[]" == Ok (Sequence [])
 
 singleQuote = "'"
 doubleQuote = "\""
