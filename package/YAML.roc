@@ -91,6 +91,9 @@ parseHelper = \state, byte ->
                 Ok value -> Continue (LookingForNextValueInSequence (n + 1) (List.append previousValues (processRawStrIntoValue value)))
                 Err _ -> Break Invalid
 
+        (LookingForNextValueEndInSequence n tempValue previousValues, b) if UTF8.isAlpha b ->
+            Continue (LookingForNextValueEndInSequence (n + 1) (List.append tempValue b) previousValues)
+
         (LookingForNextValueEndInSequence n tempValue previousValues, b) if b == ']' ->
             when Str.fromUtf8 tempValue is
                 Ok value -> Continue (LookingForNewLine (n + 1) (Sequence (List.append previousValues (processRawStrIntoValue value))))
@@ -282,12 +285,17 @@ expect parse "key: [1,2]" == Ok (Map { key: "key", value: Sequence [Scalar (Deci
 expect parse "key: [1]" == Ok (Map { key: "key", value: Sequence [Scalar (Decimal 1)] })
 expect parse "key: [a, b]" == Ok (Map { key: "key", value: Sequence [Scalar (String "a"), Scalar (String "b")] })
 expect parse "key: [b, 1]" == Ok (Map { key: "key", value: Sequence [Scalar (String "b"), Scalar (Decimal 1)] })
+expect parse "key: [ab, c]" == Ok (Map { key: "key", value: Sequence [Scalar (String "ab"), Scalar (String "c")] })
 expect parse "not a YAML" == Ok (Scalar (String "not a YAML"))
 # TODO: Nested lists
 # expect parse "key: [c, [1,2]]" == Ok (Map { key: "key", value: Sequence [String "c", Sequence [Decimal 1, Decimal 2]] })
 expect parse "[1,2]" == Ok (Sequence [Scalar (Decimal 1), Scalar (Decimal 2)])
 expect parse "[1]" == Ok (Sequence [Scalar (Decimal 1)])
 expect parse "[]" == Ok (Sequence [])
+expect parse "[1, 2, 3, 4]" == Ok (Sequence [Scalar (Decimal 1), Scalar (Decimal 2), Scalar (Decimal 3), Scalar (Decimal 4)])
+expect parse "[ab]" == Ok (Sequence [Scalar (String "ab")])
+expect parse "[ab, cde]" == Ok (Sequence [Scalar (String "ab"), Scalar (String "cde")])
+expect parse "[a, 1, true]" == Ok (Sequence [Scalar (String "a"), Scalar (Decimal 1), Scalar (Boolean Bool.true)])
 
 singleQuote = "'"
 doubleQuote = "\""
