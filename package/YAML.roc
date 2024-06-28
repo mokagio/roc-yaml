@@ -68,10 +68,6 @@ parseBytes = \input ->
                         Ok value -> Ok (Sequence (List.map (List.append previousValues value) processRawStrIntoValue))
                         Err _ -> Err ParsingFailed
 
-                MaybeMapOrSequence _ ->
-                    # Finished before determining whether it was a map or a sequence. Must be an empty list, then.
-                    Ok (Sequence [])
-
         FinishedScalar rawScalar -> Ok (processRawStrIntoValue rawScalar)
         LookingForNewLine _ node -> Ok node
         _ -> Err ParsingFailed
