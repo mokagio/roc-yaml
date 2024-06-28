@@ -110,6 +110,12 @@ parseHelper = \state, byte ->
 
                 _ -> Break Invalid
 
+        (Accumulating n candidate, b) if b == '-' ->
+            when candidate is
+                ScalarOrMapKey _ -> Break Invalid # FIXME: "ab-" is actually a valid YAML scalar...
+                MapValue _ _ -> Break Invalid
+                SequenceValue sequenceStyle bytes previousValues -> Break Invalid # unexpected new - in already started sequence
+
         (Accumulating n candidate, b) if b == '[' ->
             when candidate is
                 ScalarOrMapKey _ -> Break Invalid # FIXME: "ab[" is actually a valid YAML scalar...
