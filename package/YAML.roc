@@ -347,6 +347,9 @@ expect parse "a\n" == Ok (Scalar (String "a"))
 expect parse "abc\n" == Ok (Scalar (String "abc"))
 expect parse "a-b" == Ok (Scalar (String "a-b"))
 expect parse "k: a-b" == Ok (Map { key: "k", value: Scalar (String "a-b") })
+expect parse "k: a-0-" == Ok (Map { key: "k", value: Scalar (String "a-0-") })
+expect parse "k: a---b" == Ok (Map { key: "k", value: Scalar (String "a---b") })
+expect parse "k: c---" == Ok (Map { key: "k", value: Scalar (String "c---") })
 
 singleQuote = "'"
 doubleQuote = "\""
