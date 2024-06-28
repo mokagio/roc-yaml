@@ -63,14 +63,18 @@ parse = \input ->
 parseHelper : ParsingState, U8 -> [Continue ParsingState, Break ParsingState]
 parseHelper = \state, byte ->
     when (state, byte) is
+        # FIXME: Indentation matters in multiline YAML! How do we keep track of that?
         (Start, b) if UTF8.isWhiteSpace b ->
-            Continue (LookingForKey (b + 1))
+            Continue (LookingForFirstNonWhiteSpaceByte (b + 1))
 
         (Start, b) if UTF8.isAlpha b || UTF8.isDigit b ->
             Continue (LookingForColon (b + 1) [b])
 
         (Start, b) if '[' == b ->
             Continue (LookingForNextValueInSequence (b + 1) [])
+
+        (LookingForFirstNonWhiteSpaceByte _, b) if UTF8.isWhiteSpace b ->
+            Continue (LookingForFirstNonWhiteSpaceByte (b + 1))
 
         (LookingForColon n tempKey, b) if b != UTF8.colon ->
             Continue (LookingForColon (n + 1) (List.append tempKey b))
@@ -140,6 +144,7 @@ parseHelper = \state, byte ->
 
 ParsingState : [
     Start,
+    LookingForFirstNonWhiteSpaceByte CurrentByte,
     LookingForKey CurrentByte, # TODO: This works just for the first key, we'll need to add Map or something to support multiple keys
     LookingForColon CurrentByte TempKey, # TODO: This works just for the first key, we'll need to add Map or something to support multiple keys
     LookingForValue CurrentByte Key,
