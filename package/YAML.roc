@@ -132,8 +132,10 @@ parseHelper = \state, byte ->
             when candidate is
                 ScalarOrMapKey bytes ->
                     Continue (Accumulating (n + 1) (ScalarOrMapKey (List.append bytes b)))
+
                 MapValue bytes key ->
                     Continue (Accumulating (n + 1) (MapValue (List.append bytes b) key))
+
                 SequenceValue sequenceStyle bytes previousValues ->
                     Continue (Accumulating (n + 1) (SequenceValue sequenceStyle (List.append bytes b) previousValues))
 
@@ -338,7 +340,7 @@ expect parse "true" == Ok (Scalar (Boolean Bool.true))
 expect parse "false" == Ok (Scalar (Boolean Bool.false))
 expect parse "f al  se" == Ok (Scalar (String "f al  se"))
 # TODO: Nested lists
-# expect parse "key: [c, [1,2]]" == Ok (Map { key: "key", value: Sequence [String "c", Sequence [Decimal 1, Decimal 2]] })
+# expect parse "key: [c, [1,2]]" == Ok (Map { key: "key", value: Sequence [Scalar (String "c"), Sequence [Scalar (Decimal 1), Scalar (Decimal 2]] })
 expect parse "[1,2]" == Ok (Sequence [Scalar (Decimal 1), Scalar (Decimal 2)])
 expect parse "[1]" == Ok (Sequence [Scalar (Decimal 1)])
 expect parse "[]" == Ok (Sequence [])
