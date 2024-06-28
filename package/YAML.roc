@@ -90,15 +90,15 @@ parseHelper = \state, byte ->
             when candidate is
                 ScalarOrMapKey bytes -> Continue (Accumulating (n + 1) (ScalarOrMapKey (List.append bytes b)))
                 MapValue bytes key -> Continue (Accumulating (n + 1) (MapValue (List.append bytes b) key))
-                SequenceValue s bytes previousValues -> Continue (Accumulating (n + 1) (SequenceValue s (List.append bytes b) previousValues))
+                SequenceValue sequenceType bytes previousValues -> Continue (Accumulating (n + 1) (SequenceValue sequenceType (List.append bytes b) previousValues))
 
         (Accumulating n candidate, b) if b == ',' ->
             when candidate is
                 ScalarOrMapKey bytes -> Continue (Accumulating (n + 1) (ScalarOrMapKey (List.append bytes b)))
                 MapValue bytes key -> Continue (Accumulating (n + 1) (MapValue (List.append bytes b) key))
-                SequenceValue s bytes previousValues ->
+                SequenceValue sequenceType bytes previousValues ->
                     when Str.fromUtf8 bytes is
-                        Ok value -> Continue (Accumulating (n + 1) (SequenceValue s [] (List.append previousValues value)))
+                        Ok value -> Continue (Accumulating (n + 1) (SequenceValue sequenceType [] (List.append previousValues value)))
                         Err _ -> Break Invalid
 
         (Accumulating n candidate, b) if b == UTF8.colon ->
@@ -147,10 +147,10 @@ ParsingState : [
 Candidate : [
     ScalarOrMapKey (List U8),
     MapValue (List U8) Key,
-    SequenceValue SequenceStyle (List U8) (List Str),
+    SequenceValue SequenceType (List U8) (List Str),
 ]
 
-SequenceStyle : [
+SequenceType : [
     DashesOnNewLines,
     InlinedSquareBrackets,
 ]
