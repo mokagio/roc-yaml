@@ -54,9 +54,13 @@ parseBytes = \input ->
         Accumulating _ candidate ->
             when candidate is
                 Any bytes | ScalarOrMapKey bytes ->
-                    when Str.fromUtf8 bytes is
-                        Ok rawScalar -> Ok (processRawStrIntoValue rawScalar)
-                        Err _ -> Err ParsingFailed
+                    if bytes == ['-'] then
+                        # Special case! Empty list
+                        Ok (Sequence [])
+                    else
+                        when Str.fromUtf8 bytes is
+                            Ok rawScalar -> Ok (processRawStrIntoValue rawScalar)
+                            Err _ -> Err ParsingFailed
 
                 MapValue bytes key ->
                     when Str.fromUtf8 bytes is
@@ -368,7 +372,7 @@ expect parse "k: a-b" == Ok (Map { key: "k", value: Scalar (String "a-b") })
 expect parse "k: a-0-" == Ok (Map { key: "k", value: Scalar (String "a-0-") })
 expect parse "k: a---b" == Ok (Map { key: "k", value: Scalar (String "a---b") })
 expect parse "k: c---" == Ok (Map { key: "k", value: Scalar (String "c---") })
-expect parse "-" == Ok (Scalar (String "-"))
+expect parse "-" == Ok (Sequence [])
 
 singleQuote = "'"
 doubleQuote = "\""
