@@ -131,7 +131,7 @@ parseHelper = \state, byte ->
         (Accumulating n candidate, b) if b == '-' ->
             when candidate is
                 ScalarOrMapKey bytes -> Continue (Accumulating (n + 1) (ScalarOrMapKey (List.append bytes b)))
-                MapValue _ _ -> Break Invalid
+                MapValue bytes key -> Continue (Accumulating (n + 1) (MapValue (List.append bytes b) key))
                 SequenceValue sequenceStyle bytes previousValues -> Break Invalid # unexpected new - in already started sequence
 
         (Accumulating n candidate, b) if b == '[' ->
@@ -346,6 +346,7 @@ expect parse "[a, 1, true]" == Ok (Sequence [Scalar (String "a"), Scalar (Decima
 expect parse "a\n" == Ok (Scalar (String "a"))
 expect parse "abc\n" == Ok (Scalar (String "abc"))
 expect parse "a-b" == Ok (Scalar (String "a-b"))
+expect parse "k: a-b" == Ok (Map { key: "k", value: Scalar (String "a-b") })
 
 singleQuote = "'"
 doubleQuote = "\""
