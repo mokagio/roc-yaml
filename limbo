@@ -1,0 +1,25 @@
+#!/bin/bash -eu
+
+# TCR: test && commit || revert
+#
+# https://medium.com/@kentbeck_7670/limbo-scaling-software-collaboration-afd4f00db4b
+
+function _commit() {
+  git add -p
+  git commit
+}
+
+function _revert() {
+  git diff # just in case you need to look back
+  git checkout .
+}
+
+if make test; then
+  echo "✅ - Tests passed"
+  _commit
+else
+  echo "❌ - Tests failed"
+  _revert
+  exit 1
+fi
+
