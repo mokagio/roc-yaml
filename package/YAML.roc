@@ -137,7 +137,9 @@ parseHelper = \state, byte ->
                                 Break Invalid
 
         (LookingForFirstNonWhiteSpaceByte _, b) if UTF8.isWhiteSpace b ->
-            Continue (LookingForFirstNonWhiteSpaceByte (b + 1))
+            when b is
+                '\n' -> Break Invalid
+                _ -> Continue (LookingForFirstNonWhiteSpaceByte (b + 1))
 
         # TODO: How do we handle the end of the input?
         _ ->
