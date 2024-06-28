@@ -53,6 +53,9 @@ parseBytes = \input ->
     when List.walkUntil input Start parseHelper is
         Accumulating _ candidate ->
             when candidate is
+                Any _ ->
+                    Err ParsingFailed
+
                 ScalarOrMapKey bytes ->
                     when Str.fromUtf8 bytes is
                         Ok rawScalar -> Ok (processRawStrIntoValue rawScalar)
@@ -88,6 +91,7 @@ parseHelper = \state, byte ->
         # FIXME: Better check needed, can't use == '_' etc.
         (Accumulating n candidate, b) if UTF8.isAlpha b || UTF8.isDigit b || b == '_' || b == '"' || b == '\'' ->
             when candidate is
+                Any _ -> Break NotImplemented
                 ScalarOrMapKey bytes -> Continue (Accumulating (n + 1) (ScalarOrMapKey (List.append bytes b)))
                 MapValue bytes key -> Continue (Accumulating (n + 1) (MapValue (List.append bytes b) key))
                 SequenceValue sequenceType bytes previousValues -> Continue (Accumulating (n + 1) (SequenceValue sequenceType (List.append bytes b) previousValues))
@@ -96,6 +100,7 @@ parseHelper = \state, byte ->
             when b is
                 '\n' ->
                     when candidate is
+                        Any _ -> Break NotImplemented
                         ScalarOrMapKey bytes ->
                             when Str.fromUtf8 bytes is
                                 Ok rawScalar -> Continue (FinishedScalar rawScalar)
@@ -106,12 +111,14 @@ parseHelper = \state, byte ->
 
                 _ ->
                     when candidate is
+                        Any _ -> Break NotImplemented
                         ScalarOrMapKey bytes -> Continue (Accumulating (n + 1) (ScalarOrMapKey (List.append bytes b)))
                         MapValue bytes key -> Continue (Accumulating (n + 1) (MapValue (List.append bytes b) key))
                         SequenceValue sequenceType bytes previousValues -> Continue (Accumulating (n + 1) (SequenceValue sequenceType (List.append bytes b) previousValues))
 
         (Accumulating n candidate, b) if b == ',' ->
             when candidate is
+                Any _ -> Break NotImplemented
                 ScalarOrMapKey bytes -> Continue (Accumulating (n + 1) (ScalarOrMapKey (List.append bytes b)))
                 MapValue bytes key -> Continue (Accumulating (n + 1) (MapValue (List.append bytes b) key))
                 SequenceValue sequenceType bytes previousValues ->
@@ -130,6 +137,7 @@ parseHelper = \state, byte ->
 
         (Accumulating n candidate, b) if b == '-' ->
             when candidate is
+                Any _ -> Break NotImplemented
                 ScalarOrMapKey bytes ->
                     Continue (Accumulating (n + 1) (ScalarOrMapKey (List.append bytes b)))
 
@@ -141,12 +149,14 @@ parseHelper = \state, byte ->
 
         (Accumulating n candidate, b) if b == '[' ->
             when candidate is
+                Any _ -> Break NotImplemented
                 ScalarOrMapKey _ -> Break Invalid # FIXME: "ab[" is actually a valid YAML scalar...
                 MapValue bytes key -> Continue (Accumulating (n + 1) (MapValue (List.append bytes b) key))
                 SequenceValue _ _ _ -> Break Invalid # unexpected new [ in already started sequence
 
         (Accumulating n candidate, b) if b == ']' ->
             when candidate is
+                Any _ -> Break NotImplemented
                 ScalarOrMapKey _ -> Break Invalid # FIXME: "ab]" is actually a valid YAML scalar...
                 MapValue bytes key -> Continue (Accumulating (n + 1) (MapValue (List.append bytes b) key))
                 SequenceValue _ bytes previousValues ->
@@ -178,6 +188,7 @@ ParsingState : [
 ]
 
 Candidate : [
+    Any (List U8), # For case like when starting with '-', which could then be "- a\n- b", or "- a: b", or "-abc"
     ScalarOrMapKey (List U8),
     MapValue (List U8) Key,
     SequenceValue SequenceType (List U8) (List Str),
