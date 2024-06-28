@@ -110,24 +110,26 @@ parseHelper = \state, byte ->
 
                 _ -> Break Invalid
 
-        (Accumulating n candidate, b) if b == '[' || b == ']' ->
+        (Accumulating n candidate, b) if b == '[' ->
             when candidate is
-                # FIXME: "ab[" is actually a valid YAML scalar...
-                ScalarOrMapKey _ -> Break Invalid
+                ScalarOrMapKey _ -> Break Invalid # FIXME: "ab[" is actually a valid YAML scalar...
+                MapValue bytes key -> Continue (Accumulating (n + 1) (MapValue (List.append bytes b) key))
+                SequenceValue _ _ _-> Break Invalid # unexpected new [ in already started sequence
+
+        (Accumulating n candidate, b) if b == ']' ->
+            when candidate is
+                ScalarOrMapKey _ -> Break Invalid # FIXME: "ab]" is actually a valid YAML scalar...
                 MapValue bytes key -> Continue (Accumulating (n + 1) (MapValue (List.append bytes b) key))
                 SequenceValue _ bytes previousValues ->
-                    if b == ']' then
-                        if List.isEmpty bytes then
-                            Continue (LookingForNewLine (n + 1) (Sequence (List.map previousValues processRawStrIntoValue)))
-                        else
-                            when Str.fromUtf8 bytes is
-                                Ok rawValue ->
-                                    Continue (LookingForNewLine (n + 1) (Sequence (List.map (List.append previousValues rawValue) processRawStrIntoValue)))
-
-                                Err _ ->
-                                    Break Invalid
+                    if List.isEmpty bytes then
+                        Continue (LookingForNewLine (n + 1) (Sequence (List.map previousValues processRawStrIntoValue)))
                     else
-                        Break Invalid
+                        when Str.fromUtf8 bytes is
+                            Ok rawValue ->
+                                Continue (LookingForNewLine (n + 1) (Sequence (List.map (List.append previousValues rawValue) processRawStrIntoValue)))
+
+                            Err _ ->
+                                Break Invalid
 
         (LookingForFirstNonWhiteSpaceByte _, b) if UTF8.isWhiteSpace b ->
             Continue (LookingForFirstNonWhiteSpaceByte (b + 1))
