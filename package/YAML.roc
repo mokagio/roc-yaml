@@ -95,8 +95,7 @@ parseHelper = \state, byte ->
         # FIXME: Better check needed, can't use == '_' etc.
         (Accumulating n candidate, b) if UTF8.isAlpha b || UTF8.isDigit b || b == '_' || b == '"' || b == '\'' ->
             when candidate is
-                Any _ -> Break NotImplemented
-                ScalarOrMapKey bytes -> Continue (Accumulating (n + 1) (ScalarOrMapKey (List.append bytes b)))
+                Any bytes | ScalarOrMapKey bytes -> Continue (Accumulating (n + 1) (ScalarOrMapKey (List.append bytes b)))
                 MapValue bytes key -> Continue (Accumulating (n + 1) (MapValue (List.append bytes b) key))
                 SequenceValue sequenceType bytes previousValues -> Continue (Accumulating (n + 1) (SequenceValue sequenceType (List.append bytes b) previousValues))
 
@@ -373,6 +372,8 @@ expect parse "k: a-0-" == Ok (Map { key: "k", value: Scalar (String "a-0-") })
 expect parse "k: a---b" == Ok (Map { key: "k", value: Scalar (String "a---b") })
 expect parse "k: c---" == Ok (Map { key: "k", value: Scalar (String "c---") })
 expect parse "-" == Ok (Sequence [])
+expect parse "-a" == Ok (Scalar (String "-a"))
+expect parse "-a1" == Ok (Scalar (String "-a1"))
 
 singleQuote = "'"
 doubleQuote = "\""
