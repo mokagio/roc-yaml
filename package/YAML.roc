@@ -173,6 +173,7 @@ ParsingState : [
     Accumulating U8 Candidate,
     LookingForNewLine U8 Node, # TODO: This only work if there was a full node on the line...
     FinishedScalar Str,
+    NotImplemented,
     Invalid,
 ]
 
