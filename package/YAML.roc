@@ -68,6 +68,7 @@ parseBytes = \input ->
                         Ok value -> Ok (Sequence (List.map (List.append previousValues value) processRawStrIntoValue))
                         Err _ -> Err ParsingFailed
 
+        FinishedScalar rawScalar -> Ok (processRawStrIntoValue rawScalar)
         LookingForNewLine _ node -> Ok node
         _ -> Err ParsingFailed
 
@@ -93,7 +94,16 @@ parseHelper = \state, byte ->
 
         (Accumulating n candidate, b) if UTF8.isWhiteSpace b ->
             when b is
-                '\n' -> Break Invalid
+                '\n' ->
+                    when candidate is
+                        ScalarOrMapKey bytes ->
+                            when Str.fromUtf8 bytes is
+                                Ok rawScalar -> Continue (FinishedScalar rawScalar)
+                                Err _ -> Break Invalid
+
+                        MapValue bytes key -> Continue (Accumulating (n + 1) (MapValue (List.append bytes b) key))
+                        SequenceValue sequenceType bytes previousValues -> Continue (Accumulating (n + 1) (SequenceValue sequenceType (List.append bytes b) previousValues))
+
                 _ ->
                     when candidate is
                         ScalarOrMapKey bytes -> Continue (Accumulating (n + 1) (ScalarOrMapKey (List.append bytes b)))
@@ -157,6 +167,7 @@ ParsingState : [
     LookingForFirstNonWhiteSpaceByte U8,
     Accumulating U8 Candidate,
     LookingForNewLine U8 Node, # TODO: This only work if there was a full node on the line...
+    FinishedScalar Str,
     Invalid,
 ]
 
