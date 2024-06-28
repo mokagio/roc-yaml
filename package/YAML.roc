@@ -45,8 +45,11 @@ Value : [
 Key : Str
 
 parse : Str -> Result Node [ParsingFailed]
-parse = \input ->
-    when List.walkUntil (Str.toUtf8 input) Start parseHelper is
+parse = \input -> parseBytes (Str.toUtf8 input)
+
+parseBytes : List U8 -> Result Node [ParsingFailed]
+parseBytes = \input ->
+    when List.walkUntil input Start parseHelper is
         Accumulating _ candidate ->
             when candidate is
                 ScalarOrMapKey bytes ->
