@@ -53,14 +53,10 @@ parseBytes = \input ->
     when List.walkUntil input Start parseHelper is
         Accumulating _ candidate ->
             when candidate is
-                Any bytes | ScalarOrMapKey bytes ->
-                    if bytes == ['-'] then
-                        # Special case! Empty list
-                        Ok (Sequence [])
-                    else
-                        when Str.fromUtf8 bytes is
-                            Ok rawScalar -> Ok (processRawStrIntoValue rawScalar)
-                            Err _ -> Err ParsingFailed
+                Any bytes | MaybeMapOrSequence bytes | ScalarOrMapKey bytes ->
+                    when Str.fromUtf8 bytes is
+                        Ok rawScalar -> Ok (processRawStrIntoValue rawScalar)
+                        Err _ -> Err ParsingFailed
 
                 MapValue bytes key ->
                     when Str.fromUtf8 bytes is
@@ -227,6 +223,8 @@ processRawStrIntoValue = \rawStr ->
                 Str.split (Str.replaceFirst (Str.replaceLast trimmed "]" "") "[" "") ","
                 |> List.map processRawStrIntoValue
             )
+    else if trimmed == "-" then
+        Sequence []
     else if isInteger trimmed then
         when Str.toDec trimmed is
             Ok value -> Scalar (Decimal value)
