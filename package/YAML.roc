@@ -130,7 +130,7 @@ parseHelper = \state, byte ->
 
         (Accumulating n candidate, b) if b == '-' ->
             when candidate is
-                ScalarOrMapKey _ -> Break Invalid # FIXME: "ab-" is actually a valid YAML scalar...
+                ScalarOrMapKey bytes -> Continue (Accumulating (n + 1) (ScalarOrMapKey (List.append bytes b)))
                 MapValue _ _ -> Break Invalid
                 SequenceValue sequenceStyle bytes previousValues -> Break Invalid # unexpected new - in already started sequence
 
@@ -345,6 +345,7 @@ expect parse "[ab, cde]" == Ok (Sequence [Scalar (String "ab"), Scalar (String "
 expect parse "[a, 1, true]" == Ok (Sequence [Scalar (String "a"), Scalar (Decimal 1), Scalar (Boolean Bool.true)])
 expect parse "a\n" == Ok (Scalar (String "a"))
 expect parse "abc\n" == Ok (Scalar (String "abc"))
+expect parse "a-b" == Ok (Scalar (String "a-b"))
 
 singleQuote = "'"
 doubleQuote = "\""
