@@ -44,7 +44,7 @@ Value : [
 
 Key : Str
 
-parse : Str -> Result Node [ListWasEmpty] # TODO: Use custom error type(s)
+parse : Str -> Result Node [ParsingFailed]
 parse = \input ->
     when List.walkUntil (Str.toUtf8 input) Start parseHelper is
         Accumulating _ candidate ->
@@ -52,20 +52,20 @@ parse = \input ->
                 ScalarOrMapKey bytes ->
                     when Str.fromUtf8 bytes is
                         Ok rawScalar -> Ok (processRawStrIntoValue rawScalar)
-                        Err _ -> Err ListWasEmpty
+                        Err _ -> Err ParsingFailed
 
                 MapValue bytes key ->
                     when Str.fromUtf8 bytes is
                         Ok rawValue -> Ok (Map { key, value: processRawStrIntoValue rawValue })
-                        Err _ -> Err ListWasEmpty
+                        Err _ -> Err ParsingFailed
 
                 SequenceValue bytes previousValues ->
                     when Str.fromUtf8 bytes is
                         Ok value -> Ok (Sequence (List.map (List.append previousValues value) processRawStrIntoValue))
-                        Err _ -> Err ListWasEmpty
+                        Err _ -> Err ParsingFailed
 
         LookingForNewLine _ node -> Ok node
-        _ -> Err ListWasEmpty
+        _ -> Err ParsingFailed
 
 parseHelper : ParsingState, U8 -> [Continue ParsingState, Break ParsingState]
 parseHelper = \state, byte ->
