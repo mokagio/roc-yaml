@@ -85,11 +85,20 @@ parseHelper = \state, byte ->
             Continue (Accumulating (b + 1) (SequenceValue InlinedSquareBrackets [] []))
 
         # FIXME: Better check needed, can't use == '_' etc.
-        (Accumulating n candidate, b) if UTF8.isAlpha b || UTF8.isDigit b || UTF8.isWhiteSpace b || b == '_' || b == '"' || b == '\'' ->
+        (Accumulating n candidate, b) if UTF8.isAlpha b || UTF8.isDigit b || b == '_' || b == '"' || b == '\'' ->
             when candidate is
                 ScalarOrMapKey bytes -> Continue (Accumulating (n + 1) (ScalarOrMapKey (List.append bytes b)))
                 MapValue bytes key -> Continue (Accumulating (n + 1) (MapValue (List.append bytes b) key))
                 SequenceValue sequenceType bytes previousValues -> Continue (Accumulating (n + 1) (SequenceValue sequenceType (List.append bytes b) previousValues))
+
+        (Accumulating n candidate, b) if UTF8.isWhiteSpace b ->
+            when b is
+                '\n' -> Break Invalid
+                _ ->
+                    when candidate is
+                        ScalarOrMapKey bytes -> Continue (Accumulating (n + 1) (ScalarOrMapKey (List.append bytes b)))
+                        MapValue bytes key -> Continue (Accumulating (n + 1) (MapValue (List.append bytes b) key))
+                        SequenceValue sequenceType bytes previousValues -> Continue (Accumulating (n + 1) (SequenceValue sequenceType (List.append bytes b) previousValues))
 
         (Accumulating n candidate, b) if b == ',' ->
             when candidate is
@@ -137,9 +146,7 @@ parseHelper = \state, byte ->
                                 Break Invalid
 
         (LookingForFirstNonWhiteSpaceByte _, b) if UTF8.isWhiteSpace b ->
-            when b is
-                '\n' -> Break Invalid
-                _ -> Continue (LookingForFirstNonWhiteSpaceByte (b + 1))
+            Continue (LookingForFirstNonWhiteSpaceByte (b + 1))
 
         # TODO: How do we handle the end of the input?
         _ ->
