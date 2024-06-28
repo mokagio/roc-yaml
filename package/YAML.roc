@@ -63,17 +63,29 @@ parse = \input ->
 parseHelper : ParsingState, U8 -> [Continue ParsingState, Break ParsingState]
 parseHelper = \state, byte ->
     when (state, byte) is
-        (Start, b) if UTF8.isWhiteSpace b -> Continue (LookingForKey (b + 1))
-        (Start, b) if UTF8.isAlpha b || UTF8.isDigit b -> Continue (LookingForColon (b + 1) [b])
-        (Start, b) if '[' == b -> Continue (LookingForNextValueInSequence (b + 1) [])
-        (LookingForColon n tempKey, b) if b != UTF8.colon -> Continue (LookingForColon (n + 1) (List.append tempKey b))
+        (Start, b) if UTF8.isWhiteSpace b ->
+            Continue (LookingForKey (b + 1))
+
+        (Start, b) if UTF8.isAlpha b || UTF8.isDigit b ->
+            Continue (LookingForColon (b + 1) [b])
+
+        (Start, b) if '[' == b ->
+            Continue (LookingForNextValueInSequence (b + 1) [])
+
+        (LookingForColon n tempKey, b) if b != UTF8.colon ->
+            Continue (LookingForColon (n + 1) (List.append tempKey b))
+
         (LookingForColon n tempKey, b) if b == UTF8.colon ->
             when Str.fromUtf8 tempKey is
                 Ok key -> Continue (LookingForValue (n + 1) key)
                 Err _ -> Break Invalid
 
-        (LookingForValue n key, b) if UTF8.isWhiteSpace b -> Continue (LookingForValue (n + 1) key)
-        (LookingForValue n key, b) if b == '[' -> Continue (LookingForNextValueInMapSequence (n + 1) key [])
+        (LookingForValue n key, b) if UTF8.isWhiteSpace b ->
+            Continue (LookingForValue (n + 1) key)
+
+        (LookingForValue n key, b) if b == '[' ->
+            Continue (LookingForNextValueInMapSequence (n + 1) key [])
+
         (LookingForValue n key, b) if UTF8.isAlpha b || UTF8.isDigit b || UTF8.doubleQuote == b || UTF8.singleQuote == b ->
             Continue (LookingForValueEnd (n + 1) key [b])
 
@@ -81,8 +93,12 @@ parseHelper = \state, byte ->
             # TODO: support \n, etc.
             Continue (LookingForValueEnd (n + 1) key (List.append tempValue b))
 
-        (LookingForNextValueInSequence n previousValues, b) if UTF8.isWhiteSpace b -> Continue (LookingForNextValueInSequence (n + 1) previousValues)
-        (LookingForNextValueInSequence n previousValues, b) if b == ']' -> Continue (LookingForNewLine (n + 1) (Sequence previousValues))
+        (LookingForNextValueInSequence n previousValues, b) if UTF8.isWhiteSpace b ->
+            Continue (LookingForNextValueInSequence (n + 1) previousValues)
+
+        (LookingForNextValueInSequence n previousValues, b) if b == ']' ->
+            Continue (LookingForNewLine (n + 1) (Sequence previousValues))
+
         (LookingForNextValueInSequence n previousValues, b) if UTF8.isAlpha b || UTF8.isDigit b || UTF8.doubleQuote == b || UTF8.singleQuote == b ->
             Continue (LookingForNextValueEndInSequence (n + 1) [b] previousValues)
 
@@ -99,7 +115,9 @@ parseHelper = \state, byte ->
                 Ok value -> Continue (LookingForNewLine (n + 1) (Sequence (List.append previousValues (processRawStrIntoValue value))))
                 Err _ -> Break Invalid
 
-        (LookingForNextValueInMapSequence n key previousValues, b) if UTF8.isWhiteSpace b -> Continue (LookingForNextValueInMapSequence (n + 1) key previousValues)
+        (LookingForNextValueInMapSequence n key previousValues, b) if UTF8.isWhiteSpace b ->
+            Continue (LookingForNextValueInMapSequence (n + 1) key previousValues)
+
         (LookingForNextValueInMapSequence n key previousValues, b) if UTF8.isAlpha b || UTF8.isDigit b || UTF8.doubleQuote == b || UTF8.singleQuote == b ->
             Continue (LookingForNextValueEndInMapSequence (n + 1) key [b] previousValues)
 
