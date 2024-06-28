@@ -130,9 +130,12 @@ parseHelper = \state, byte ->
 
         (Accumulating n candidate, b) if b == '-' ->
             when candidate is
-                ScalarOrMapKey bytes -> Continue (Accumulating (n + 1) (ScalarOrMapKey (List.append bytes b)))
-                MapValue bytes key -> Continue (Accumulating (n + 1) (MapValue (List.append bytes b) key))
-                SequenceValue sequenceStyle bytes previousValues -> Break Invalid # unexpected new - in already started sequence
+                ScalarOrMapKey bytes ->
+                    Continue (Accumulating (n + 1) (ScalarOrMapKey (List.append bytes b)))
+                MapValue bytes key ->
+                    Continue (Accumulating (n + 1) (MapValue (List.append bytes b) key))
+                SequenceValue sequenceStyle bytes previousValues ->
+                    Continue (Accumulating (n + 1) (SequenceValue sequenceStyle (List.append bytes b) previousValues))
 
         (Accumulating n candidate, b) if b == '[' ->
             when candidate is
@@ -346,6 +349,7 @@ expect parse "[a, 1, true]" == Ok (Sequence [Scalar (String "a"), Scalar (Decima
 expect parse "a\n" == Ok (Scalar (String "a"))
 expect parse "abc\n" == Ok (Scalar (String "abc"))
 expect parse "a-b" == Ok (Scalar (String "a-b"))
+expect parse "[1-,-2, 3-4]" == Ok (Sequence [Scalar (String "1-"), Scalar (String "-2"), Scalar (String "3-4")])
 expect parse "k: a-b" == Ok (Map { key: "k", value: Scalar (String "a-b") })
 expect parse "k: a-0-" == Ok (Map { key: "k", value: Scalar (String "a-0-") })
 expect parse "k: a---b" == Ok (Map { key: "k", value: Scalar (String "a---b") })
