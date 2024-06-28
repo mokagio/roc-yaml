@@ -53,10 +53,7 @@ parseBytes = \input ->
     when List.walkUntil input Start parseHelper is
         Accumulating _ candidate ->
             when candidate is
-                Any _ ->
-                    Err ParsingFailed
-
-                ScalarOrMapKey bytes ->
+                Any bytes | ScalarOrMapKey bytes ->
                     when Str.fromUtf8 bytes is
                         Ok rawScalar -> Ok (processRawStrIntoValue rawScalar)
                         Err _ -> Err ParsingFailed
@@ -87,6 +84,9 @@ parseHelper = \state, byte ->
 
         (Start, b) if '[' == b ->
             Continue (Accumulating (b + 1) (SequenceValue InlinedSquareBrackets [] []))
+
+        (Start, b) if '-' == b ->
+            Continue (Accumulating (b + 1) (Any [b]))
 
         # FIXME: Better check needed, can't use == '_' etc.
         (Accumulating n candidate, b) if UTF8.isAlpha b || UTF8.isDigit b || b == '_' || b == '"' || b == '\'' ->
@@ -368,6 +368,7 @@ expect parse "k: a-b" == Ok (Map { key: "k", value: Scalar (String "a-b") })
 expect parse "k: a-0-" == Ok (Map { key: "k", value: Scalar (String "a-0-") })
 expect parse "k: a---b" == Ok (Map { key: "k", value: Scalar (String "a---b") })
 expect parse "k: c---" == Ok (Map { key: "k", value: Scalar (String "c---") })
+expect parse "-" == Ok (Scalar (String "-"))
 
 singleQuote = "'"
 doubleQuote = "\""
