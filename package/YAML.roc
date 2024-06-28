@@ -293,7 +293,11 @@ expect parse "key: [1]" == Ok (Map { key: "key", value: Sequence [Scalar (Decima
 expect parse "key: [a, b]" == Ok (Map { key: "key", value: Sequence [Scalar (String "a"), Scalar (String "b")] })
 expect parse "key: [b, 1]" == Ok (Map { key: "key", value: Sequence [Scalar (String "b"), Scalar (Decimal 1)] })
 expect parse "key: [ab, c]" == Ok (Map { key: "key", value: Sequence [Scalar (String "ab"), Scalar (String "c")] })
-expect parse "not a YAML" == Ok (Scalar (String "not a YAML"))
+expect parse "a standalone string is still YAML" == Ok (Scalar (String "a standalone string is still YAML"))
+expect parse "1" == Ok (Scalar (Decimal 1))
+expect parse "true" == Ok (Scalar (Boolean Bool.true))
+expect parse "false" == Ok (Scalar (Boolean Bool.false))
+expect parse "f al  se" == Ok (Scalar (String "f al  se"))
 # TODO: Nested lists
 # expect parse "key: [c, [1,2]]" == Ok (Map { key: "key", value: Sequence [String "c", Sequence [Decimal 1, Decimal 2]] })
 expect parse "[1,2]" == Ok (Sequence [Scalar (Decimal 1), Scalar (Decimal 2)])
