@@ -31,6 +31,7 @@ Scalar : [
 ## In particular, keys may be arbitrary nodes, the same node may be used as the value of several key: value pairs, and a mapping could even contain itself as a key or a value (directly or indirectly).
 ##
 ## https://yaml.org/spec/1.1/current.html#mapping/information%20model
+# TODO: How to make a map of maps? or a Sequence of sequences?
 Map : { key : Key, value : Value }
 
 ## https://yaml.org/spec/1.1/current.html#sequence/information%20model
