@@ -343,6 +343,8 @@ expect parse "[1, 2, 3, 4]" == Ok (Sequence [Scalar (Decimal 1), Scalar (Decimal
 expect parse "[ab]" == Ok (Sequence [Scalar (String "ab")])
 expect parse "[ab, cde]" == Ok (Sequence [Scalar (String "ab"), Scalar (String "cde")])
 expect parse "[a, 1, true]" == Ok (Sequence [Scalar (String "a"), Scalar (Decimal 1), Scalar (Boolean Bool.true)])
+expect parse "a\n" == Ok (Scalar (String "a"))
+expect parse "abc\n" == Ok (Scalar (String "abc"))
 
 singleQuote = "'"
 doubleQuote = "\""
