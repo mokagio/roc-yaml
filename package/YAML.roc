@@ -82,7 +82,6 @@ parseHelper = \state, byte ->
             Continue (Accumulating (b + 1) (ScalarOrMapKey [b]))
 
         (Start, b) if '[' == b ->
-            # Continue (LookingForNextValueInSequence (b + 1) [])
             Continue (Accumulating (b + 1) (SequenceValue InlinedSquareBrackets [] []))
 
         # FIXME: Better check needed, can't use == '_' etc.
@@ -120,7 +119,7 @@ parseHelper = \state, byte ->
             when candidate is
                 ScalarOrMapKey _ -> Break Invalid # FIXME: "ab[" is actually a valid YAML scalar...
                 MapValue bytes key -> Continue (Accumulating (n + 1) (MapValue (List.append bytes b) key))
-                SequenceValue _ _ _-> Break Invalid # unexpected new [ in already started sequence
+                SequenceValue _ _ _ -> Break Invalid # unexpected new [ in already started sequence
 
         (Accumulating n candidate, b) if b == ']' ->
             when candidate is
