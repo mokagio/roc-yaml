@@ -384,5 +384,8 @@ expect parse "   1" == Ok (Scalar (Decimal 1))
 expect parse "  true  " == Ok (Scalar (Boolean Bool.true))
 expect parse "false   " == Ok (Scalar (Boolean Bool.false))
 
+# Next up:
+expect parse "- a" != Ok (Sequence [Scalar (String "a")])
+
 singleQuote = "'"
 doubleQuote = "\""
