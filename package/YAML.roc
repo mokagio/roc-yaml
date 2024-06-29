@@ -79,7 +79,7 @@ parseHelper = \state, byte ->
         (Start, b) if UTF8.isWhiteSpace b ->
             Continue (LookingForFirstNonWhiteSpaceByte (b + 1))
 
-        (Start, b) if UTF8.isAlpha b || UTF8.isDigit b ->
+        (Start, b) | (LookingForFirstNonWhiteSpaceByte _, b) if UTF8.isAlpha b || UTF8.isDigit b ->
             Continue (Accumulating (b + 1) (ScalarOrMapKey [b]))
 
         (Start, b) if '[' == b ->
@@ -377,6 +377,7 @@ expect parse "k: c---" == Ok (Map { key: "k", value: Scalar (String "c---") })
 expect parse "-" == Ok (Sequence [])
 expect parse "-a" == Ok (Scalar (String "-a"))
 expect parse "-a1" == Ok (Scalar (String "-a1"))
+expect parse " a" == Ok (Scalar (String "a"))
 
 singleQuote = "'"
 doubleQuote = "\""
