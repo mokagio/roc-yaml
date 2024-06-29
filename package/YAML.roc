@@ -377,7 +377,12 @@ expect parse "k: c---" == Ok (Map { key: "k", value: Scalar (String "c---") })
 expect parse "-" == Ok (Sequence [])
 expect parse "-a" == Ok (Scalar (String "-a"))
 expect parse "-a1" == Ok (Scalar (String "-a1"))
+
 expect parse " a" == Ok (Scalar (String "a"))
+expect parse "  z" == Ok (Scalar (String "z"))
+expect parse "   1" == Ok (Scalar (Decimal 1))
+expect parse "  true  " == Ok (Scalar (Boolean Bool.true))
+expect parse "false   " == Ok (Scalar (Boolean Bool.false))
 
 singleQuote = "'"
 doubleQuote = "\""
