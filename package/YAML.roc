@@ -432,6 +432,7 @@ expect parse "- key  : value " == Ok (Map { key: "key", value: Scalar (String "v
 expect parse "- a\n- b" == Ok (Sequence [Scalar (String "a"), Scalar (String "b")])
 expect parse "- a\n- b\n- c" == Ok (Sequence [Scalar (String "a"), Scalar (String "b"), Scalar (String "c")])
 expect parse "- a\n- 1\n- false" == Ok (Sequence [Scalar (String "a"), Scalar (Decimal 1), Scalar (Boolean Bool.false)])
+expect parse "- a\n- -b\n- --c" == Ok (Sequence [Scalar (String "a"), Scalar (String "-b"), Scalar (String "--c")])
 
 singleQuote = "'"
 doubleQuote = "\""
