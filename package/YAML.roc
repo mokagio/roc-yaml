@@ -489,6 +489,7 @@ expect parse "- a\n- b\n- c" == Ok (Sequence [Scalar (String "a"), Scalar (Strin
 expect parse "- a\n- 1\n- false" == Ok (Sequence [Scalar (String "a"), Scalar (Decimal 1), Scalar (Boolean Bool.false)])
 expect parse "- a\n- -b\n- --c" == Ok (Sequence [Scalar (String "a"), Scalar (String "-b"), Scalar (String "--c")])
 expect parse "k: v\nx: y" == Ok (Map (mapWith "k" (Scalar (String "v")) |> Dict.insert "x" (Scalar (String "y"))))
+expect parse "k: vvv vv v\nx: 1" == Ok (Map (mapWith "k" (Scalar (String "vvv vv v")) |> Dict.insert "x" (Scalar (Decimal 1))))
 
 singleQuote = "'"
 doubleQuote = "\""
