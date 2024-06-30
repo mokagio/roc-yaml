@@ -88,8 +88,7 @@ parseHelper = \state, byte ->
         (Start, b) if '-' == b ->
             Continue (Accumulating (b + 1) (SomethingStartingWithDash [b]))
 
-        # FIXME: Better check needed, can't use == '_' etc.
-        (Accumulating n candidate, b) if UTF8.isAlpha b || UTF8.isDigit b || b == '_' || b == '"' || b == '\'' ->
+        (Accumulating n candidate, b) if UTF8.isAlpha b || UTF8.isDigit b || isNonSemanticSymbol b ->
             when candidate is
                 SomethingStartingWithDash bytes | ScalarOrMapKey bytes -> Continue (Accumulating (n + 1) (ScalarOrMapKey (List.append bytes b)))
                 MapValue bytes key -> Continue (Accumulating (n + 1) (MapValue (List.append bytes b) key))
@@ -335,6 +334,12 @@ expect stripSingleQuotes "abc" == "abc"
 expect stripSingleQuotes "abc'" == "abc"
 expect stripSingleQuotes "abc''" == "abc"
 expect stripSingleQuotes "''abc'" == "'abc"
+
+isNonSemanticSymbol : U8 -> Bool
+isNonSemanticSymbol = \b ->
+    when b is
+        '_' | '"' | '\'' -> Bool.true
+        _ -> Bool.false
 
 expect parse "key: value" == Ok (Map { key: "key", value: Scalar (String "value") })
 expect parse "key: other value" == Ok (Map { key: "key", value: Scalar (String "other value") })
