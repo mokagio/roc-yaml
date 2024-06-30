@@ -405,6 +405,9 @@ expect parse "   1" == Ok (Scalar (Decimal 1))
 expect parse "  true  " == Ok (Scalar (Boolean Bool.true))
 expect parse "false   " == Ok (Scalar (Boolean Bool.false))
 expect parse "- a" == Ok (Sequence [Scalar (String "a")])
+expect parse "- 1" == Ok (Sequence [Scalar (Decimal 1)])
+expect parse "- a 1 true" == Ok (Sequence [Scalar (String "a 1 true")])
+expect parse "-    a 1 true" == Ok (Sequence [Scalar (String "a 1 true")])
 
 singleQuote = "'"
 doubleQuote = "\""
