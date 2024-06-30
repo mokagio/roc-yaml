@@ -109,8 +109,17 @@ parseHelper = \state, byte ->
                                 Ok rawScalar -> Continue (FinishedScalar rawScalar)
                                 Err _ -> Break Invalid
 
-                        MapValue bytes key -> Continue (Accumulating (n + 1) (MapValue (List.append bytes b) key))
-                        SequenceValue sequenceType bytes previousValues -> Continue (Accumulating (n + 1) (SequenceValue sequenceType (List.append bytes b) previousValues))
+                        MapOrSequence bytes ->
+                            when Str.fromUtf8 (List.dropFirst bytes 1) is
+                                Ok rawValue -> Continue (Accumulating (n + 1) (SequenceValue DashesOnNewLines [] [rawValue]))
+                                Err _ -> Break Invalid
+
+                        MapValue bytes key ->
+                            Continue (Accumulating (n + 1) (MapValue (List.append bytes b) key))
+                        SequenceValue sequenceType bytes previousValues ->
+                            when Str.fromUtf8 bytes is
+                                Ok rawValue -> Continue (Accumulating (n + 1) (SequenceValue sequenceType [] (List.append previousValues rawValue)))
+                                Err _ -> Break Invalid
                         _ -> Break NotImplemented
 
                 ' ' ->
@@ -160,7 +169,13 @@ parseHelper = \state, byte ->
                     Continue (Accumulating (n + 1) (MapValue (List.append bytes b) key))
 
                 SequenceValue sequenceStyle bytes previousValues ->
-                    Continue (Accumulating (n + 1) (SequenceValue sequenceStyle (List.append bytes b) previousValues))
+                    when sequenceStyle is
+                        DashesOnNewLines if List.isEmpty bytes ->
+                            Continue (Accumulating (n + 1) (SequenceValue DashesOnNewLines [] previousValues))
+                        DashesOnNewLines ->
+                            Continue (Accumulating (n + 1) (SequenceValue DashesOnNewLines (List.append bytes b) previousValues))
+                        InlinedSquareBrackets ->
+                            Continue (Accumulating (n + 1) (SequenceValue InlinedSquareBrackets (List.append bytes b) previousValues))
 
                 _ -> Break NotImplemented
 
@@ -414,6 +429,9 @@ expect parse "- key: value" == Ok (Map { key: "key", value: Scalar (String "valu
 expect parse "-   key: value" == Ok (Map { key: "key", value: Scalar (String "value") })
 expect parse "- key  : value" == Ok (Map { key: "key", value: Scalar (String "value") })
 expect parse "- key  : value " == Ok (Map { key: "key", value: Scalar (String "value") })
+expect parse "- a\n- b" == Ok (Sequence [Scalar (String "a"), Scalar (String "b")])
+expect parse "- a\n- b\n- c" == Ok (Sequence [Scalar (String "a"), Scalar (String "b"), Scalar (String "c")])
+expect parse "- a\n- 1\n- false" == Ok (Sequence [Scalar (String "a"), Scalar (Decimal 1), Scalar (Boolean Bool.false)])
 
 singleQuote = "'"
 doubleQuote = "\""
