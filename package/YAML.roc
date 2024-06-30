@@ -53,7 +53,7 @@ parseBytes = \input ->
     when List.walkUntil input Start parseHelper is
         Accumulating _ candidate ->
             when candidate is
-                Any bytes | MaybeMapOrSequence bytes | ScalarOrMapKey bytes ->
+                SomethingStartingWithDash bytes | MaybeMapOrSequence bytes | ScalarOrMapKey bytes ->
                     when Str.fromUtf8 bytes is
                         Ok rawScalar -> Ok (processRawStrIntoValue rawScalar)
                         Err _ -> Err ParsingFailed
@@ -86,12 +86,12 @@ parseHelper = \state, byte ->
             Continue (Accumulating (b + 1) (SequenceValue InlinedSquareBrackets [] []))
 
         (Start, b) if '-' == b ->
-            Continue (Accumulating (b + 1) (Any [b]))
+            Continue (Accumulating (b + 1) (SomethingStartingWithDash [b]))
 
         # FIXME: Better check needed, can't use == '_' etc.
         (Accumulating n candidate, b) if UTF8.isAlpha b || UTF8.isDigit b || b == '_' || b == '"' || b == '\'' ->
             when candidate is
-                Any bytes | ScalarOrMapKey bytes -> Continue (Accumulating (n + 1) (ScalarOrMapKey (List.append bytes b)))
+                SomethingStartingWithDash bytes | ScalarOrMapKey bytes -> Continue (Accumulating (n + 1) (ScalarOrMapKey (List.append bytes b)))
                 MapValue bytes key -> Continue (Accumulating (n + 1) (MapValue (List.append bytes b) key))
                 SequenceValue sequenceType bytes previousValues -> Continue (Accumulating (n + 1) (SequenceValue sequenceType (List.append bytes b) previousValues))
                 _ -> Break NotImplemented
@@ -191,7 +191,7 @@ ParsingState : [
 ]
 
 Candidate : [
-    Any (List U8), # For cases like when starting with '-', which could be the start of "- a\n- b", or "- a: b", or "-abc"
+    SomethingStartingWithDash (List U8), # For cases like when starting with '-', which could be the start of "- a\n- b", or "- a: b", or "-abc"
     MaybeMapOrSequence (List U8), # For "- " which could be the start of "- key: value" or "- a\n- b"
     ScalarOrMapKey (List U8), # For cases like "key" which could be the start of "key: value" or "keyhole"
     MapValue (List U8) Key,
