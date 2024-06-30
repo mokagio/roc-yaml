@@ -141,8 +141,8 @@ parseHelper = \state, byte ->
         (Accumulating n candidate, b) if b == UTF8.colon ->
             when candidate is
                 MaybeMapOrSequence bytes ->
-                    when Str.fromUtf8 bytes is
-                        Ok key -> Continue (Accumulating (n + 1) (MapValue [] (Str.trimEnd key)))
+                    when (Str.fromUtf8 (List.dropFirst bytes 1)) is
+                        Ok key -> Continue (Accumulating (n + 1) (MapValue [] (Str.trim key)))
                         Err _ -> Break Invalid
                 ScalarOrMapKey bytes ->
                     when Str.fromUtf8 bytes is
@@ -398,7 +398,6 @@ expect parse "k: c---" == Ok (Map { key: "k", value: Scalar (String "c---") })
 expect parse "-" == Ok (Sequence [])
 expect parse "-a" == Ok (Scalar (String "-a"))
 expect parse "-a1" == Ok (Scalar (String "-a1"))
-
 expect parse " a" == Ok (Scalar (String "a"))
 expect parse "  z" == Ok (Scalar (String "z"))
 expect parse "   1" == Ok (Scalar (Decimal 1))
@@ -408,6 +407,9 @@ expect parse "- a" == Ok (Sequence [Scalar (String "a")])
 expect parse "- 1" == Ok (Sequence [Scalar (Decimal 1)])
 expect parse "- a 1 true" == Ok (Sequence [Scalar (String "a 1 true")])
 expect parse "-    a 1 true" == Ok (Sequence [Scalar (String "a 1 true")])
+expect parse "- key: value" == Ok (Map { key: "key", value: Scalar (String "value") })
+expect parse "-   key: value" == Ok (Map { key: "key", value: Scalar (String "value") })
+expect parse "- key  : value" == Ok (Map { key: "key", value: Scalar (String "value") })
 
 singleQuote = "'"
 doubleQuote = "\""
