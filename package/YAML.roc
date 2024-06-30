@@ -53,9 +53,14 @@ parseBytes = \input ->
     when List.walkUntil input Start parseHelper is
         Accumulating _ candidate ->
             when candidate is
-                SomethingStartingWithDash bytes | MaybeMapOrSequence bytes | ScalarOrMapKey bytes ->
+                SomethingStartingWithDash bytes | ScalarOrMapKey bytes ->
                     when Str.fromUtf8 bytes is
                         Ok rawScalar -> Ok (processRawStrIntoValue rawScalar)
+                        Err _ -> Err ParsingFailed
+
+                MaybeMapOrSequence bytes ->
+                    when Str.fromUtf8 (List.dropFirst bytes 1) is
+                        Ok rawValue -> Ok (Sequence [processRawStrIntoValue rawValue])
                         Err _ -> Err ParsingFailed
 
                 MapValue bytes key ->
@@ -91,9 +96,9 @@ parseHelper = \state, byte ->
         (Accumulating n candidate, b) if UTF8.isAlpha b || UTF8.isDigit b || isNonSemanticSymbol b ->
             when candidate is
                 SomethingStartingWithDash bytes | ScalarOrMapKey bytes -> Continue (Accumulating (n + 1) (ScalarOrMapKey (List.append bytes b)))
+                MaybeMapOrSequence bytes -> Continue (Accumulating (n + 1) (MaybeMapOrSequence (List.append bytes b)))
                 MapValue bytes key -> Continue (Accumulating (n + 1) (MapValue (List.append bytes b) key))
                 SequenceValue sequenceType bytes previousValues -> Continue (Accumulating (n + 1) (SequenceValue sequenceType (List.append bytes b) previousValues))
-                _ -> Break NotImplemented
 
         (Accumulating n candidate, b) if UTF8.isWhiteSpace b ->
             when b is
@@ -107,6 +112,13 @@ parseHelper = \state, byte ->
                         MapValue bytes key -> Continue (Accumulating (n + 1) (MapValue (List.append bytes b) key))
                         SequenceValue sequenceType bytes previousValues -> Continue (Accumulating (n + 1) (SequenceValue sequenceType (List.append bytes b) previousValues))
                         _ -> Break NotImplemented
+
+                ' ' ->
+                    when candidate is
+                        SomethingStartingWithDash bytes | MaybeMapOrSequence bytes -> Continue (Accumulating (n + 1) (MaybeMapOrSequence (List.append bytes b)))
+                        ScalarOrMapKey bytes -> Continue (Accumulating (n + 1) (ScalarOrMapKey (List.append bytes b)))
+                        MapValue bytes key -> Continue (Accumulating (n + 1) (MapValue (List.append bytes b) key))
+                        SequenceValue sequenceType bytes previousValues -> Continue (Accumulating (n + 1) (SequenceValue sequenceType (List.append bytes b) previousValues))
 
                 _ ->
                     when candidate is
@@ -128,6 +140,10 @@ parseHelper = \state, byte ->
 
         (Accumulating n candidate, b) if b == UTF8.colon ->
             when candidate is
+                MaybeMapOrSequence bytes ->
+                    when Str.fromUtf8 bytes is
+                        Ok key -> Continue (Accumulating (n + 1) (MapValue [] (Str.trimEnd key)))
+                        Err _ -> Break Invalid
                 ScalarOrMapKey bytes ->
                     when Str.fromUtf8 bytes is
                         Ok key -> Continue (Accumulating (n + 1) (MapValue [] (Str.trimEnd key)))
@@ -388,9 +404,7 @@ expect parse "  z" == Ok (Scalar (String "z"))
 expect parse "   1" == Ok (Scalar (Decimal 1))
 expect parse "  true  " == Ok (Scalar (Boolean Bool.true))
 expect parse "false   " == Ok (Scalar (Boolean Bool.false))
-
-# Next up:
-expect parse "- a" != Ok (Sequence [Scalar (String "a")])
+expect parse "- a" == Ok (Sequence [Scalar (String "a")])
 
 singleQuote = "'"
 doubleQuote = "\""
