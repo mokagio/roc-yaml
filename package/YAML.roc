@@ -248,6 +248,9 @@ parseHelper = \state, byte ->
         (LookingForFirstNonWhiteSpaceByte _, b) if UTF8.isWhiteSpace b ->
             Continue (LookingForFirstNonWhiteSpaceByte (b + 1))
 
+        (FinishedScalar scalar, b) if UTF8.isWhiteSpace b ->
+            Continue (FinishedScalar scalar)
+
         # TODO: How do we handle the end of the input?
         _ ->
             Break Invalid
@@ -473,6 +476,8 @@ expect parse "  z" == Ok (Scalar (String "z"))
 expect parse "x " == Ok (Scalar (String "x"))
 expect parse "   1" == Ok (Scalar (Decimal 1))
 expect parse "2 " == Ok (Scalar (Decimal 2))
+expect parse "a\n" == Ok (Scalar (String "a"))
+expect parse "a\n\n" == Ok (Scalar (String "a"))
 expect parse "  true  " == Ok (Scalar (Boolean Bool.true))
 expect parse "false   " == Ok (Scalar (Boolean Bool.false))
 expect parse "- a" == Ok (Sequence [Scalar (String "a")])
