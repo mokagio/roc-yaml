@@ -495,6 +495,13 @@ expect parse "- a\n- 1\n- false" == Ok (Sequence [Scalar (String "a"), Scalar (D
 expect parse "- a\n- -b\n- --c" == Ok (Sequence [Scalar (String "a"), Scalar (String "-b"), Scalar (String "--c")])
 expect parse "k: v\nx: y" == Ok (Map (mapWith "k" (Scalar (String "v")) |> Dict.insert "x" (Scalar (String "y"))))
 expect parse "k: vvv vv v\nx: 1" == Ok (Map (mapWith "k" (Scalar (String "vvv vv v")) |> Dict.insert "x" (Scalar (Decimal 1))))
+# FIXME: Better error
+# sequence entries are not allowed here
+#   in "<unicode string>", line 1, column 4:
+#     k: - 1, - 2
+#        ^
+# https://yaml-online-parser.appspot.com/
+expect parse "k: - 1\n- 2" == Err ParsingFailed
 
 singleQuote = "'"
 doubleQuote = "\""
