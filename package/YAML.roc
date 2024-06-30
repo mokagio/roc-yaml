@@ -32,7 +32,7 @@ Scalar : [
 ##
 ## https://yaml.org/spec/1.1/current.html#mapping/information%20model
 # TODO: How to make a map of maps? or a Sequence of sequences?
-Map : { key : Key, value : Value }
+Map : Dict Key Value
 
 ## https://yaml.org/spec/1.1/current.html#sequence/information%20model
 Sequence : List Value
@@ -40,7 +40,7 @@ Sequence : List Value
 Value : [
     Scalar Scalar,
     Sequence (List Value), # can't use Sequence Sequence because it would be self-recursive—roc_lang 2024-06-18-41ea2bfbc7d
-    Map { key : Key, value : Value },
+    Map (Dict Key Value),
 ]
 
 Key : Str
@@ -65,7 +65,8 @@ parseBytes = \input ->
 
                 MapValue bytes key ->
                     when Str.fromUtf8 bytes is
-                        Ok rawValue -> Ok (Map { key, value: processRawStrIntoValue rawValue })
+                        Ok rawValue ->
+                            Ok (Map (mapWith key (processRawStrIntoValue rawValue)))
                         Err _ -> Err ParsingFailed
 
                 SequenceValue _ bytes previousValues ->
@@ -260,6 +261,11 @@ processRawStrIntoValue = \rawStr ->
             Ok value -> Scalar (Boolean value)
             Err _ -> Scalar (String trimmed)
 
+mapWith: Key, Value -> Map
+mapWith = \key, value ->
+    Dict.empty {}
+    |> Dict.insert key value
+
 isInteger : Str -> Bool
 isInteger = \str ->
     trimmed = Str.trim str
@@ -372,29 +378,29 @@ isNonSemanticSymbol = \b ->
         '_' | '"' | '\'' -> Bool.true
         _ -> Bool.false
 
-expect parse "key: value" == Ok (Map { key: "key", value: Scalar (String "value") })
-expect parse "key: other value" == Ok (Map { key: "key", value: Scalar (String "other value") })
-expect parse "other_key: yet other value" == Ok (Map { key: "other_key", value: Scalar (String "yet other value") })
-expect parse "key: 1" == Ok (Map { key: "key", value: Scalar (Decimal 1) })
-expect parse "key: true" == Ok (Map { key: "key", value: Scalar (Boolean Bool.true) })
-expect parse "k: false" == Ok (Map { key: "k", value: Scalar (Boolean Bool.false) })
-expect parse "k:    false" == Ok (Map { key: "k", value: Scalar (Boolean Bool.false) })
-expect parse "k: false " == Ok (Map { key: "k", value: Scalar (Boolean Bool.false) })
-expect parse "k: fa lse " == Ok (Map { key: "k", value: Scalar (String "fa lse") })
-expect parse "key: \"true\"" == Ok (Map { key: "key", value: Scalar (String "true") })
-expect parse "key: 'true'" == Ok (Map { key: "key", value: Scalar (String "true") })
-expect parse "key: [1,2]" == Ok (Map { key: "key", value: Sequence [Scalar (Decimal 1), Scalar (Decimal 2)] })
-expect parse "key: [1]" == Ok (Map { key: "key", value: Sequence [Scalar (Decimal 1)] })
-expect parse "key: [a, b]" == Ok (Map { key: "key", value: Sequence [Scalar (String "a"), Scalar (String "b")] })
-expect parse "key: [b, 1]" == Ok (Map { key: "key", value: Sequence [Scalar (String "b"), Scalar (Decimal 1)] })
-expect parse "key: [ab, c]" == Ok (Map { key: "key", value: Sequence [Scalar (String "ab"), Scalar (String "c")] })
+expect parse "key: value" == Ok (Map (mapWith "key" (Scalar (String "value"))))
+expect parse "key: other value" == Ok (Map (mapWith "key" (Scalar (String "other value"))))
+expect parse "other_key: yet other value" == Ok (Map (mapWith "other_key" (Scalar (String "yet other value"))))
+expect parse "key: 1" == Ok (Map (mapWith "key" (Scalar (Decimal 1))))
+expect parse "key: true" == Ok (Map (mapWith "key" (Scalar (Boolean Bool.true))))
+expect parse "k: false" == Ok (Map (mapWith "k" (Scalar (Boolean Bool.false))))
+expect parse "k:    false" == Ok (Map (mapWith "k" (Scalar (Boolean Bool.false))))
+expect parse "k: false " == Ok (Map (mapWith "k" (Scalar (Boolean Bool.false))))
+expect parse "k: fa lse " == Ok (Map (mapWith "k" (Scalar (String "fa lse"))))
+expect parse "key: \"true\"" == Ok (Map (mapWith "key" (Scalar (String "true"))))
+expect parse "key: 'true'" == Ok (Map (mapWith "key" (Scalar (String "true"))))
+expect parse "key: [1,2]" == Ok (Map (mapWith "key" (Sequence [Scalar (Decimal 1), Scalar (Decimal 2)])))
+expect parse "key: [1]" == Ok (Map (mapWith "key" (Sequence [Scalar (Decimal 1)])))
+expect parse "key: [a, b]" == Ok (Map (mapWith "key" (Sequence [Scalar (String "a"), Scalar (String "b")])))
+expect parse "key: [b, 1]" == Ok (Map (mapWith "key" (Sequence [Scalar (String "b"), Scalar (Decimal 1)])))
+expect parse "key: [ab, c]" == Ok (Map (mapWith "key" (Sequence [Scalar (String "ab"), Scalar (String "c")])))
 expect parse "a standalone string is still YAML" == Ok (Scalar (String "a standalone string is still YAML"))
 expect parse "1" == Ok (Scalar (Decimal 1))
 expect parse "true" == Ok (Scalar (Boolean Bool.true))
 expect parse "false" == Ok (Scalar (Boolean Bool.false))
 expect parse "f al  se" == Ok (Scalar (String "f al  se"))
 # TODO: Nested lists
-# expect parse "key: [c, [1,2]]" == Ok (Map { key: "key", value: Sequence [Scalar (String "c"), Sequence [Scalar (Decimal 1), Scalar (Decimal 2]] })
+# expect parse "key: [c, [1,2]]" == Ok (Map (mapWith "key" Sequence [Scalar (String "c"), Sequence [Scalar (Decimal 1), Scalar (Decimal 2)]]))
 expect parse "[1,2]" == Ok (Sequence [Scalar (Decimal 1), Scalar (Decimal 2)])
 expect parse "[1]" == Ok (Sequence [Scalar (Decimal 1)])
 expect parse "[]" == Ok (Sequence [])
@@ -406,10 +412,10 @@ expect parse "a\n" == Ok (Scalar (String "a"))
 expect parse "abc\n" == Ok (Scalar (String "abc"))
 expect parse "a-b" == Ok (Scalar (String "a-b"))
 expect parse "[1-,-2, 3-4]" == Ok (Sequence [Scalar (String "1-"), Scalar (String "-2"), Scalar (String "3-4")])
-expect parse "k: a-b" == Ok (Map { key: "k", value: Scalar (String "a-b") })
-expect parse "k: a-0-" == Ok (Map { key: "k", value: Scalar (String "a-0-") })
-expect parse "k: a---b" == Ok (Map { key: "k", value: Scalar (String "a---b") })
-expect parse "k: c---" == Ok (Map { key: "k", value: Scalar (String "c---") })
+expect parse "k: a-b" == Ok (Map (mapWith "k" (Scalar (String "a-b"))))
+expect parse "k: a-0-" == Ok (Map (mapWith "k" (Scalar (String "a-0-"))))
+expect parse "k: a---b" == Ok (Map (mapWith "k" (Scalar (String "a---b"))))
+expect parse "k: c---" == Ok (Map (mapWith "k" (Scalar (String "c---"))))
 expect parse "-" == Ok (Sequence [])
 expect parse "-a" == Ok (Scalar (String "-a"))
 expect parse "-a1" == Ok (Scalar (String "-a1"))
@@ -425,10 +431,10 @@ expect parse "- 1" == Ok (Sequence [Scalar (Decimal 1)])
 expect parse "- a 1 true" == Ok (Sequence [Scalar (String "a 1 true")])
 expect parse "-    a 1 true" == Ok (Sequence [Scalar (String "a 1 true")])
 expect parse "-    a " == Ok (Sequence [Scalar (String "a")])
-expect parse "- key: value" == Ok (Map { key: "key", value: Scalar (String "value") })
-expect parse "-   key: value" == Ok (Map { key: "key", value: Scalar (String "value") })
-expect parse "- key  : value" == Ok (Map { key: "key", value: Scalar (String "value") })
-expect parse "- key  : value " == Ok (Map { key: "key", value: Scalar (String "value") })
+expect parse "- key: value" == Ok (Map (mapWith "key" (Scalar (String "value"))))
+expect parse "-   key: value" == Ok (Map (mapWith "key" (Scalar (String "value"))))
+expect parse "- key  : value" == Ok (Map (mapWith "key" (Scalar (String "value"))))
+expect parse "- key  : value " == Ok (Map (mapWith "key" (Scalar (String "value"))))
 expect parse "- a\n- b" == Ok (Sequence [Scalar (String "a"), Scalar (String "b")])
 expect parse "- a\n- b\n- c" == Ok (Sequence [Scalar (String "a"), Scalar (String "b"), Scalar (String "c")])
 expect parse "- a\n- 1\n- false" == Ok (Sequence [Scalar (String "a"), Scalar (Decimal 1), Scalar (Boolean Bool.false)])
